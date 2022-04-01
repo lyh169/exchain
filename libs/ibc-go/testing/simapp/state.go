@@ -8,17 +8,21 @@ import (
 	"math/rand"
 	"time"
 
-	tmjson "github.com/okex/exchain/libs/tendermint/libs/json"
+	//	tmjson "github.com/okex/exchain/libs/tendermint/libs/json"
 	tmtypes "github.com/okex/exchain/libs/tendermint/types"
 
-	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	//stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/okex/exchain/libs/cosmos-sdk/codec"
 	"github.com/okex/exchain/libs/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 	"github.com/okex/exchain/libs/cosmos-sdk/types/module"
+	stakingtypes "github.com/okex/exchain/libs/cosmos-sdk/x/staking/types"
+	//banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	banktypes "github.com/okex/exchain/libs/cosmos-sdk/x/bank"
+	//	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	authtypes "github.com/okex/exchain/libs/cosmos-sdk/x/auth/types"
+	//simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+	simtypes "github.com/okex/exchain/libs/cosmos-sdk/x/simulation"
 	simappparams "github.com/okex/exchain/libs/ibc-go/testing/simapp/params"
 )
 
@@ -90,7 +94,7 @@ func AppStateFn(cdc codec.JSONCodec, simManager *module.SimulationManager) simty
 		// compute not bonded balance
 		notBondedTokens := sdk.ZeroInt()
 		for _, val := range stakingState.Validators {
-			if val.Status != stakingtypes.Unbonded {
+			if val.Status != sdk.Unbonded {
 				continue
 			}
 			notBondedTokens = notBondedTokens.Add(val.GetTokens())
