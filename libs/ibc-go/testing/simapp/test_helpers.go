@@ -22,9 +22,9 @@ import (
 	"github.com/okex/exchain/libs/cosmos-sdk/types/errors"
 	authtypes "github.com/okex/exchain/libs/cosmos-sdk/x/auth"
 	authexported "github.com/okex/exchain/libs/cosmos-sdk/x/auth/exported"
-	banktypes "github.com/okex/exchain/libs/cosmos-sdk/x/bank"
 	minttypes "github.com/okex/exchain/libs/cosmos-sdk/x/mint"
 	"github.com/okex/exchain/libs/ibc-go/testing/simapp/helpers"
+	cryptotypes2 "github.com/okex/exchain/libs/tendermint/crypto"
 	"github.com/okex/exchain/libs/tendermint/crypto/ed25519"
 )
 
@@ -49,10 +49,9 @@ var DefaultConsensusParams = &abci.ConsensusParams{
 
 func setup(withGenesis bool, invCheckPeriod uint) (*SimApp, GenesisState) {
 	db := dbm.NewMemDB()
-	encCdc := MakeTestEncodingConfig()
 	app := NewSimApp(log.NewNopLogger(), db, nil, true, map[int64]bool{}, invCheckPeriod)
 	if withGenesis {
-		return app, NewDefaultGenesisState(encCdc.Marshaler)
+		return app, NewDefaultGenesisState(nil)
 	}
 	return app, GenesisState{}
 }
@@ -82,18 +81,19 @@ func Setup(isCheckTx bool) *SimApp {
 
 // SetupWithGenesisAccounts initializes a new SimApp with the provided genesis
 // accounts and possible balances.
-func SetupWithGenesisAccounts(genAccs []authexported.GenesisAccount, balances ...banktypes.Balance) *SimApp {
+func SetupWithGenesisAccounts(genAccs []authexported.GenesisAccount, balances sdk.Coins) *SimApp {
 	app, genesisState := setup(true, 0)
 	authGenesis := authtypes.NewGenesisState(authtypes.DefaultParams(), genAccs)
 	genesisState[authtypes.ModuleName] = app.AppCodec().GetCdc().MustMarshalJSON(authGenesis)
 
 	totalSupply := sdk.NewCoins()
 	for _, b := range balances {
-		totalSupply = totalSupply.Add(b.Coins...)
+		totalSupply = totalSupply.Add(b)
 	}
 
-	bankGenesis := banktypes.NewGenesisState(banktypes.DefaultGenesisState().Params, balances, totalSupply, []banktypes.Metadata{})
-	genesisState[banktypes.ModuleName] = app.AppCodec().MustMarshalJSON(bankGenesis)
+	// todo rm bank temp
+	//	bankGenesis := banktypes.NewGenesisState(banktypes.DefaultGenesisState().Params, balances, totalSupply, []banktypes.Metadata{})
+	//	genesisState[banktypes.ModuleName] = app.AppCodec().MustMarshalJSON(bankGenesis)
 
 	stateBytes, err := json.MarshalIndent(genesisState, "", " ")
 	if err != nil {
@@ -183,12 +183,12 @@ func addTestAddrs(app *SimApp, ctx sdk.Context, accNum int, accAmt sdk.Int, stra
 }
 
 func initAccountWithCoins(app *SimApp, ctx sdk.Context, addr sdk.AccAddress, coins sdk.Coins) {
-	err := app.BankKeeper.MintCoins(ctx, minttypes.ModuleName, coins)
+	err := app.SupplyKeeper.MintCoins(ctx, minttypes.ModuleName, coins)
 	if err != nil {
 		panic(err)
 	}
 
-	err = app.BankKeeper.SendCoinsFromModuleToAccount(ctx, minttypes.ModuleName, addr, coins)
+	err = app.SupplyKeeper.SendCoinsFromModuleToAccount(ctx, minttypes.ModuleName, addr, coins)
 	if err != nil {
 		panic(err)
 	}
@@ -229,7 +229,7 @@ func TestAddr(addr string, bech string) (sdk.AccAddress, error) {
 // CheckBalance checks the balance of an account.
 func CheckBalance(t *testing.T, app *SimApp, addr sdk.AccAddress, balances sdk.Coins) {
 	ctxCheck := app.BaseApp.NewContext(true, tmproto.Header{})
-	require.True(t, balances.IsEqual(app.BankKeeper.GetAllBalances(ctxCheck, addr)))
+	require.True(t, balances.IsEqual(app.BankKeeper.GetCoins(ctxCheck, addr)))
 }
 
 // SignAndDeliver signs and delivers a transaction. No simulation occurs as the
@@ -303,8 +303,8 @@ func incrementAllSequenceNumbers(initSeqNums []uint64) {
 }
 
 // CreateTestPubKeys returns a total of numPubKeys public keys in ascending order.
-func CreateTestPubKeys(numPubKeys int) []cryptotypes.PubKey {
-	var publicKeys []cryptotypes.PubKey
+func CreateTestPubKeys(numPubKeys int) []cryptotypes2.PubKey {
+	var publicKeys []cryptotypes2.PubKey
 	var buffer bytes.Buffer
 
 	// start at 10 to avoid changing 1 to 01, 2 to 02, etc
@@ -320,15 +320,19 @@ func CreateTestPubKeys(numPubKeys int) []cryptotypes.PubKey {
 }
 
 // NewPubKeyFromHex returns a PubKey from a hex string.
-func NewPubKeyFromHex(pk string) (res cryptotypes.PubKey) {
+func NewPubKeyFromHex(pk string) (res cryptotypes2.PubKey) {
 	pkBytes, err := hex.DecodeString(pk)
 	if err != nil {
 		panic(err)
 	}
-	if len(pkBytes) != ed25519.PubKeySize {
+
+	if len(pkBytes) != ed25519.PubKeyEd25519Size {
 		panic(errors.Wrap(errors.ErrInvalidPubKey, "invalid pubkey size"))
 	}
-	return &ed25519.PubKey{Key: pkBytes}
+	key := ed25519.PubKeyEd25519{}
+	copy(key[:], pkBytes)
+
+	return key
 }
 
 // EmptyAppOptions is a stub implementing AppOptions
@@ -342,9 +346,9 @@ func (ao EmptyAppOptions) Get(o string) interface{} {
 // FundAccount is a utility function that funds an account by minting and sending the coins to the address
 // TODO(fdymylja): instead of using the mint module account, which has the permission of minting, create a "faucet" account
 func FundAccount(app *SimApp, ctx sdk.Context, addr sdk.AccAddress, amounts sdk.Coins) error {
-	err := app.BankKeeper.MintCoins(ctx, minttypes.ModuleName, amounts)
+	err := app.SupplyKeeper.MintCoins(ctx, minttypes.ModuleName, amounts)
 	if err != nil {
 		return err
 	}
-	return app.BankKeeper.SendCoinsFromModuleToAccount(ctx, minttypes.ModuleName, addr, amounts)
+	return app.SupplyKeeper.SendCoinsFromModuleToAccount(ctx, minttypes.ModuleName, addr, amounts)
 }
