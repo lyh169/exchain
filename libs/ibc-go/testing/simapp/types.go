@@ -1,8 +1,9 @@
 package simapp
 
 import (
-	"github.com/cosmos/cosmos-sdk/server/types"
+	"encoding/json"
 	abci "github.com/okex/exchain/libs/tendermint/abci/types"
+	tmtypes "github.com/okex/exchain/libs/tendermint/types"
 
 	//"github.com/okex/exchain/libs/cosmos-sdk/server/types"
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
@@ -33,8 +34,8 @@ type App interface {
 
 	// Exports the state of the application for a genesis file.
 	ExportAppStateAndValidators(
-		forZeroHeight bool, jailAllowedAddrs []string,
-	) (types.ExportedApp, error)
+		forZeroHeight bool, jailWhiteList []string,
+	) (json.RawMessage, []tmtypes.GenesisValidator, error)
 
 	// All the registered module account addreses.
 	ModuleAccountAddrs() map[string]bool
