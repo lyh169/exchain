@@ -2,12 +2,13 @@ package types
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 	clienttypes "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 )
 
@@ -26,15 +27,15 @@ const (
 )
 
 var (
-	addr1     = sdk.AccAddress(secp256k1.GenPrivKey().PubKey().Address()).String()
+	addr1     = sdk.AccAddress(secp256k1.GenPrivKey().PubKey().Address())
 	addr2     = sdk.AccAddress("testaddr2").String()
-	emptyAddr string
+	emptyAddr = sdk.AccAddress([]byte{})
 
 	coin             = sdk.NewCoin("atom", sdk.NewInt(100))
 	ibcCoin          = sdk.NewCoin("ibc/7F1D3FCF4AE79E1554D670D1AD949A9BA4E4A3C76C63093E17E446A46061A7A2", sdk.NewInt(100))
 	invalidIBCCoin   = sdk.NewCoin("notibc/7F1D3FCF4AE79E1554D670D1AD949A9BA4E4A3C76C63093E17E446A46061A7A2", sdk.NewInt(100))
-	invalidDenomCoin = sdk.Coin{Denom: "0atom", Amount: sdk.NewInt(100)}
-	zeroCoin         = sdk.Coin{Denom: "atoms", Amount: sdk.NewInt(0)}
+	invalidDenomCoin = sdk.Coin{Denom: "0atom", Amount: sdk.NewDecFromBigInt(big.NewInt(100))}
+	zeroCoin         = sdk.Coin{Denom: "atoms", Amount: sdk.NewDecFromBigInt(big.NewInt(0))}
 
 	timeoutHeight = clienttypes.NewHeight(0, 10)
 )
@@ -99,7 +100,7 @@ func TestMsgTransferValidation(t *testing.T) {
 func TestMsgTransferGetSigners(t *testing.T) {
 	addr := sdk.AccAddress(secp256k1.GenPrivKey().PubKey().Address())
 
-	msg := NewMsgTransfer(validPort, validChannel, coin, addr.String(), addr2, timeoutHeight, 0)
+	msg := NewMsgTransfer(validPort, validChannel, coin, addr, addr2, timeoutHeight, 0)
 	res := msg.GetSigners()
 
 	require.Equal(t, []sdk.AccAddress{addr}, res)

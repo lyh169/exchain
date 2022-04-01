@@ -9,23 +9,24 @@ import (
 	"testing"
 	"time"
 
+	abci "github.com/okex/exchain/libs/tendermint/abci/types"
+	tmproto "github.com/okex/exchain/libs/tendermint/abci/types"
 	"github.com/okex/exchain/libs/tendermint/libs/log"
+	tmtypes "github.com/okex/exchain/libs/tendermint/types"
+	dbm "github.com/okex/exchain/libs/tm-db"
 	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	tmtypes "github.com/tendermint/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
 
-	bam "github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
-	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/errors"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
+	bam "github.com/okex/exchain/libs/cosmos-sdk/baseapp"
+	"github.com/okex/exchain/libs/cosmos-sdk/client"
+	cryptotypes "github.com/okex/exchain/libs/cosmos-sdk/crypto/types"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
+	"github.com/okex/exchain/libs/cosmos-sdk/types/errors"
+	authtypes "github.com/okex/exchain/libs/cosmos-sdk/x/auth"
+	authexported "github.com/okex/exchain/libs/cosmos-sdk/x/auth/exported"
+	banktypes "github.com/okex/exchain/libs/cosmos-sdk/x/bank"
+	minttypes "github.com/okex/exchain/libs/cosmos-sdk/x/mint"
 	"github.com/okex/exchain/libs/ibc-go/testing/simapp/helpers"
+	"github.com/okex/exchain/libs/tendermint/crypto/ed25519"
 )
 
 // DefaultConsensusParams defines the default Tendermint consensus params used in
@@ -38,7 +39,7 @@ var DefaultConsensusParams = &abci.ConsensusParams{
 	Evidence: &tmproto.EvidenceParams{
 		MaxAgeNumBlocks: 302400,
 		MaxAgeDuration:  504 * time.Hour, // 3 weeks is the max duration
-		MaxBytes:        10000,
+		//MaxBytes:        10000,
 	},
 	Validator: &tmproto.ValidatorParams{
 		PubKeyTypes: []string{
@@ -50,7 +51,7 @@ var DefaultConsensusParams = &abci.ConsensusParams{
 func setup(withGenesis bool, invCheckPeriod uint) (*SimApp, GenesisState) {
 	db := dbm.NewMemDB()
 	encCdc := MakeTestEncodingConfig()
-	app := NewSimApp(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, invCheckPeriod, encCdc, EmptyAppOptions{})
+	app := NewSimApp(log.NewNopLogger(), db, nil, true, map[int64]bool{}, invCheckPeriod)
 	if withGenesis {
 		return app, NewDefaultGenesisState(encCdc.Marshaler)
 	}
@@ -82,10 +83,10 @@ func Setup(isCheckTx bool) *SimApp {
 
 // SetupWithGenesisAccounts initializes a new SimApp with the provided genesis
 // accounts and possible balances.
-func SetupWithGenesisAccounts(genAccs []authtypes.GenesisAccount, balances ...banktypes.Balance) *SimApp {
+func SetupWithGenesisAccounts(genAccs []authexported.GenesisAccount, balances ...banktypes.Balance) *SimApp {
 	app, genesisState := setup(true, 0)
 	authGenesis := authtypes.NewGenesisState(authtypes.DefaultParams(), genAccs)
-	genesisState[authtypes.ModuleName] = app.AppCodec().MustMarshalJSON(authGenesis)
+	genesisState[authtypes.ModuleName] = app.AppCodec().GetCdc().MustMarshalJSON(authGenesis)
 
 	totalSupply := sdk.NewCoins()
 	for _, b := range balances {
@@ -108,7 +109,7 @@ func SetupWithGenesisAccounts(genAccs []authtypes.GenesisAccount, balances ...ba
 		},
 	)
 
-	app.Commit()
+	app.Commit(tmproto.RequestCommit{})
 	app.BeginBlock(abci.RequestBeginBlock{Header: tmproto.Header{Height: app.LastBlockHeight() + 1}})
 
 	return app
@@ -235,7 +236,7 @@ func CheckBalance(t *testing.T, app *SimApp, addr sdk.AccAddress, balances sdk.C
 // SignAndDeliver signs and delivers a transaction. No simulation occurs as the
 // ibc testing package causes checkState and deliverState to diverge in block time.
 func SignAndDeliver(
-	t *testing.T, txCfg client.TxConfig, app *bam.BaseApp, header tmproto.Header, msgs []sdk.Msg,
+	t *testing.T /*, txCfg client.TxConfig*/, app *bam.BaseApp, header tmproto.Header, msgs []sdk.Msg,
 	chainID string, accNums, accSeqs []uint64, expSimPass, expPass bool, priv ...cryptotypes.PrivKey,
 ) (sdk.GasInfo, *sdk.Result, error) {
 

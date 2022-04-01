@@ -6,25 +6,29 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/x/staking/teststaking"
 	"github.com/okex/exchain/libs/cosmos-sdk/codec"
 	cryptotypes "github.com/okex/exchain/libs/cosmos-sdk/crypto/types"
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 	sdkerrors "github.com/okex/exchain/libs/cosmos-sdk/types/errors"
-	authtypes "github.com/okex/exchain/libs/cosmos-sdk/x/auth/types"
-	banktypes "github.com/okex/exchain/libs/cosmos-sdk/x/bank/types"
+	"github.com/okex/exchain/libs/cosmos-sdk/x/auth"
+	authtypes "github.com/okex/exchain/libs/cosmos-sdk/x/auth/exported"
+
+	//banktypes "github.com/okex/exchain/libs/cosmos-sdk/x/bank/types"
 	capabilitykeeper "github.com/okex/exchain/libs/cosmos-sdk/x/capability/keeper"
 	capabilitytypes "github.com/okex/exchain/libs/cosmos-sdk/x/capability/types"
-	"github.com/okex/exchain/libs/cosmos-sdk/x/staking/teststaking"
+
 	stakingtypes "github.com/okex/exchain/libs/cosmos-sdk/x/staking/types"
 	abci "github.com/okex/exchain/libs/tendermint/abci/types"
+	tmproto "github.com/okex/exchain/libs/tendermint/abci/types"
 	"github.com/okex/exchain/libs/tendermint/crypto/secp256k1"
 	"github.com/okex/exchain/libs/tendermint/crypto/tmhash"
-	tmproto "github.com/okex/exchain/libs/tendermint/proto/tendermint/types"
-	tmprotoversion "github.com/okex/exchain/libs/tendermint/proto/tendermint/version"
 	tmtypes "github.com/okex/exchain/libs/tendermint/types"
+	tmprotoversion "github.com/okex/exchain/libs/tendermint/version"
 	tmversion "github.com/okex/exchain/libs/tendermint/version"
 	"github.com/stretchr/testify/require"
 
+	apptypes "github.com/okex/exchain/app/types"
 	clienttypes "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	commitmenttypes "github.com/okex/exchain/libs/ibc-go/modules/core/23-commitment/types"
 	host "github.com/okex/exchain/libs/ibc-go/modules/core/24-host"
@@ -50,13 +54,13 @@ type TestChain struct {
 	CurrentHeader tmproto.Header     // header for current block height
 	QueryServer   types.QueryServer
 	//TxConfig      client.TxConfig
-	Codec codec.BinaryCodec
+	Codec *codec.ProtoCodec
 
 	Vals    *tmtypes.ValidatorSet
 	Signers []tmtypes.PrivValidator
 
 	senderPrivKey cryptotypes.PrivKey
-	//SenderAccount authtypes.AccountI
+	SenderAccount authtypes.Account
 }
 
 // NewTestChain initializes a new TestChain instance with a single validator set using a
@@ -80,16 +84,27 @@ func NewTestChain(t *testing.T, coord *Coordinator, chainID string) *TestChain {
 
 	// generate genesis account
 	senderPrivKey := secp256k1.GenPrivKey()
-	acc := authtypes.NewBaseAccount(senderPrivKey.PubKey().Address().Bytes(), nil, senderPrivKey.PubKey(), 0, 0)
+	//acc := authtypes.NewBaseAccount(senderPrivKey.PubKey().Address().Bytes(), nil, senderPrivKey.PubKey(), 0, 0)
+	acc := new(auth.BaseAccount)
 	//acc := authtypes.NewBaseAccount(addr, nil, secp256k1.GenPrivKey().PubKey(), 0, 0)
 
-	amount, ok := sdk.NewIntFromString("10000000000000000000")
-	require.True(t, ok)
+	// amount, ok := sdk.NewIntFromString("10000000000000000000")
+	// require.True(t, ok)
 
-	balance := banktypes.Balance{
-		Address: acc.GetAddress().String(),
-		Coins:   sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, amount)),
+	//fromBalance := suite.app.AccountKeeper.GetAccount(suite.ctx, cmFrom).GetCoins()
+	var account *apptypes.EthAccount
+	balance := sdk.NewCoins(NewPhotonCoin(sdk.OneInt()))
+	addr := sdk.AccAddress(pubkey.Address())
+	baseAcc := auth.NewBaseAccount(addr, balance, pubkey, 10, 50)
+	account = &apptypes.EthAccount{
+		BaseAccount: baseAcc,
+		CodeHash:    []byte{1, 2},
 	}
+	fmt.Println(account)
+	// balance := banktypes.Balance{
+	// 	Address: acc.GetAddress().String(),
+	// 	Coins:   sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, amount)),
+	// }
 
 	app := SetupWithGenesisValSet(t, valSet, []authtypes.GenesisAccount{acc}, balance)
 
@@ -100,7 +115,7 @@ func NewTestChain(t *testing.T, coord *Coordinator, chainID string) *TestChain {
 		Time:    coord.CurrentTime.UTC(),
 	}
 
-	txConfig := app.GetTxConfig()
+	//txConfig := app.GetTxConfig()
 
 	// create an account to send transactions from
 	chain := &TestChain{
@@ -110,8 +125,8 @@ func NewTestChain(t *testing.T, coord *Coordinator, chainID string) *TestChain {
 		App:           app,
 		CurrentHeader: header,
 		QueryServer:   app.GetIBCKeeper(),
-		TxConfig:      txConfig,
-		Codec:         app.AppCodec(),
+		//TxConfig:      txConfig,
+		Codec:         app.AppCodec().GetProtocMarshal(),
 		Vals:          valSet,
 		Signers:       signers,
 		senderPrivKey: senderPrivKey,
@@ -157,7 +172,7 @@ func (chain *TestChain) QueryProofAtHeight(key []byte, height int64) ([]byte, cl
 	merkleProof, err := commitmenttypes.ConvertProofs(res.ProofOps)
 	require.NoError(chain.t, err)
 
-	proof, err := chain.App.AppCodec().Marshal(&merkleProof)
+	proof := chain.App.AppCodec().MustMarshal(&merkleProof)
 	require.NoError(chain.t, err)
 
 	revision := clienttypes.ParseChainID(chain.ChainID)
@@ -170,27 +185,27 @@ func (chain *TestChain) QueryProofAtHeight(key []byte, height int64) ([]byte, cl
 
 // QueryUpgradeProof performs an abci query with the given key and returns the proto encoded merkle proof
 // for the query and the height at which the proof will succeed on a tendermint verifier.
-func (chain *TestChain) QueryUpgradeProof(key []byte, height uint64) ([]byte, clienttypes.Height) {
-	res := chain.App.Query(abci.RequestQuery{
-		Path:   "store/upgrade/key",
-		Height: int64(height - 1),
-		Data:   key,
-		Prove:  true,
-	})
+// func (chain *TestChain) QueryUpgradeProof(key []byte, height uint64) ([]byte, clienttypes.Height) {
+// 	res := chain.App.Query(abci.RequestQuery{
+// 		Path:   "store/upgrade/key",
+// 		Height: int64(height - 1),
+// 		Data:   key,
+// 		Prove:  true,
+// 	})
 
-	merkleProof, err := commitmenttypes.ConvertProofs(res.ProofOps)
-	require.NoError(chain.t, err)
+// 	merkleProof, err := commitmenttypes.ConvertProofs(res.ProofOps)
+// 	require.NoError(chain.t, err)
 
-	proof, err := chain.App.AppCodec().Marshal(&merkleProof)
-	require.NoError(chain.t, err)
+// 	proof, err := chain.App.AppCodec().Marshal(&merkleProof)
+// 	require.NoError(chain.t, err)
 
-	revision := clienttypes.ParseChainID(chain.ChainID)
+// 	revision := clienttypes.ParseChainID(chain.ChainID)
 
-	// proof height + 1 is returned as the proof created corresponds to the height the proof
-	// was created in the IAVL tree. Tendermint and subsequently the clients that rely on it
-	// have heights 1 above the IAVL tree. Thus we return proof height + 1
-	return proof, clienttypes.NewHeight(revision, uint64(res.Height+1))
-}
+// 	// proof height + 1 is returned as the proof created corresponds to the height the proof
+// 	// was created in the IAVL tree. Tendermint and subsequently the clients that rely on it
+// 	// have heights 1 above the IAVL tree. Thus we return proof height + 1
+// 	return proof, clienttypes.NewHeight(revision, uint64(res.Height+1))
+// }
 
 // QueryConsensusStateProof performs an abci query for a consensus state
 // stored on the given clientID. The proof and consensusHeight are returned.
@@ -221,8 +236,8 @@ func (chain *TestChain) NextBlock() {
 		// NOTE: the time is increased by the coordinator to maintain time synchrony amongst
 		// chains.
 		Time:               chain.CurrentHeader.Time,
-		ValidatorsHash:     chain.Vals.Hash(),
-		NextValidatorsHash: chain.Vals.Hash(),
+		ValidatorsHash:     chain.Vals.Hash(chain.App.LastBlockHeight() + 1),
+		NextValidatorsHash: chain.Vals.Hash(chain.App.LastBlockHeight() + 1),
 	}
 
 	chain.App.BeginBlock(abci.RequestBeginBlock{Header: chain.CurrentHeader})
@@ -244,7 +259,7 @@ func (chain *TestChain) SendMsgs(msgs ...sdk.Msg) (*sdk.Result, error) {
 
 	_, r, err := simapp.SignAndDeliver(
 		chain.t,
-		chain.TxConfig,
+		//chain.TxConfig,
 		chain.App.GetBaseApp(),
 		chain.GetContext().BlockHeader(),
 		msgs,
@@ -382,7 +397,7 @@ func (chain *TestChain) CreateTMClientHeader(chainID string, blockHeight int64, 
 	)
 	require.NotNil(chain.t, tmValSet)
 
-	vsetHash := tmValSet.Hash()
+	vsetHash := tmValSet.Hash(blockHeight)
 
 	tmHeader := tmtypes.Header{
 		Version:            tmprotoversion.Consensus{Block: tmversion.BlockProtocol, App: 2},
@@ -402,14 +417,14 @@ func (chain *TestChain) CreateTMClientHeader(chainID string, blockHeight int64, 
 	}
 	hhash := tmHeader.Hash()
 	blockID := MakeBlockID(hhash, 3, tmhash.Sum([]byte("part_set")))
-	voteSet := tmtypes.NewVoteSet(chainID, blockHeight, 1, tmproto.PrecommitType, tmValSet)
+	voteSet := tmtypes.NewVoteSet(chainID, blockHeight, 1, tmtypes.PrecommitType, tmValSet)
 
 	commit, err := tmtypes.MakeCommit(blockID, blockHeight, 1, voteSet, signers, timestamp)
 	require.NoError(chain.t, err)
 
-	signedHeader := &tmproto.SignedHeader{
-		Header: tmHeader.ToProto(),
-		Commit: commit.ToProto(),
+	signedHeader := &tmtypes.SignedHeader{
+		Header: &tmHeader,
+		Commit: commit,
 	}
 
 	if tmValSet != nil {
@@ -429,7 +444,7 @@ func (chain *TestChain) CreateTMClientHeader(chainID string, blockHeight int64, 
 	// The trusted fields may be nil. They may be filled before relaying messages to a client.
 	// The relayer is responsible for querying client and injecting appropriate trusted fields.
 	return &ibctmtypes.Header{
-		SignedHeader:      signedHeader,
+		SignedHeader:      signedHeader.ToProto(),
 		ValidatorSet:      valSet,
 		TrustedHeight:     trustedHeight,
 		TrustedValidators: trustedVals,
@@ -440,8 +455,8 @@ func (chain *TestChain) CreateTMClientHeader(chainID string, blockHeight int64, 
 func MakeBlockID(hash []byte, partSetSize uint32, partSetHash []byte) tmtypes.BlockID {
 	return tmtypes.BlockID{
 		Hash: hash,
-		PartSetHeader: tmtypes.PartSetHeader{
-			Total: partSetSize,
+		PartsHeader: tmtypes.PartSetHeader{
+			Total: int(partSetSize),
 			Hash:  partSetHash,
 		},
 	}
@@ -484,7 +499,7 @@ func (chain *TestChain) CreatePortCapability(scopedKeeper capabilitykeeper.Scope
 		require.NoError(chain.t, err)
 	}
 
-	chain.App.Commit()
+	chain.App.Commit(abci.RequestCommit{})
 
 	chain.NextBlock()
 }
@@ -512,7 +527,7 @@ func (chain *TestChain) CreateChannelCapability(scopedKeeper capabilitykeeper.Sc
 		require.NoError(chain.t, err)
 	}
 
-	chain.App.Commit()
+	chain.App.Commit(abci.RequestCommit{})
 
 	chain.NextBlock()
 }

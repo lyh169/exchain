@@ -8,7 +8,10 @@ import (
 
 	"github.com/okex/exchain/libs/cosmos-sdk/codec"
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
-	authtypes "github.com/okex/exchain/libs/cosmos-sdk/x/auth/types"
+	authexported "github.com/okex/exchain/libs/cosmos-sdk/x/auth/exported"
+
+	//authtypes "github.com/okex/exchain/libs/cosmos-sdk/x/auth/types"
+
 	banktypes "github.com/okex/exchain/libs/cosmos-sdk/x/bank"
 	capabilitykeeper "github.com/okex/exchain/libs/cosmos-sdk/x/capability/keeper"
 	stakingtypes "github.com/okex/exchain/libs/cosmos-sdk/x/staking/types"
@@ -55,11 +58,11 @@ func SetupTestingApp() (TestingApp, map[string]json.RawMessage) {
 // that also act as delegators. For simplicity, each validator is bonded with a delegation
 // of one consensus engine unit (10^6) in the default token of the simapp from first genesis
 // account. A Nop logger is set in SimApp.
-func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []authtypes.GenesisAccount, balances ...banktypes.Balance) TestingApp {
+func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []authexported.GenesisAccount, balances ...banktypes.Balance) TestingApp {
 	app, genesisState := DefaultTestingAppInit()
 	// set genesis accounts
 	authGenesis := authtypes.NewGenesisState(authtypes.DefaultParams(), genAccs)
-	genesisState[authtypes.ModuleName] = app.AppCodec().MustMarshalJSON(authGenesis)
+	genesisState[authtypes.ModuleName] = app.AppCodec().GetCdc().MustMarshalJSON(authGenesis)
 
 	validators := make([]stakingtypes.Validator, 0, len(valSet.Validators))
 	delegations := make([]stakingtypes.Delegation, 0, len(valSet.Validators))

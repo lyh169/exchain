@@ -506,7 +506,7 @@ func NewSimApp(
 
 	app.mm.RegisterInvariants(&app.CrisisKeeper)
 	app.mm.RegisterRoutes(app.Router(), app.QueryRouter())
-	app.configurator = module.NewConfigurator(app.Codec(), app.MsgServiceRouter(), app.GRPCQueryRouter())
+	app.configurator = module.NewConfigurator(app.AppCodec().GetCdc(), app.MsgServiceRouter(), app.GRPCQueryRouter())
 	app.mm.RegisterServices(app.configurator)
 	//app.setupUpgradeModules()
 
@@ -647,8 +647,8 @@ func (app *SimApp) GetScopedIBCKeeper() capabilitykeeper.ScopedKeeper {
 	return app.CapabilityKeeper.ScopeToModule(ibchost.ModuleName)
 }
 
-func (app *SimApp) AppCodec() codec.Codec {
-	return *app.Codec()
+func (app *SimApp) AppCodec() *codec.CodecProxy {
+	return *&app.marshal
 }
 
 func (app *SimApp) LastCommitID() sdk.CommitID {
@@ -659,12 +659,6 @@ func (app *SimApp) LastBlockHeight() int64 {
 	return app.GetCMS().LastCommitID().Version
 }
 
-// //GetTxConfig() client.TxConfig
-
-// Codec returns OKExChain's codec.
-//
-// NOTE: This is solely to be used for testing purposes as it may be desirable
-// for modules to register their own custom testing types.
 func (app *SimApp) Codec() *codec.Codec {
 	return app.marshal.GetCdc()
 }

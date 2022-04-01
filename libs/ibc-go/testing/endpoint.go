@@ -111,7 +111,7 @@ func (endpoint *Endpoint) CreateClient() (err error) {
 	}
 
 	msg, err := clienttypes.NewMsgCreateClient(
-		clientState, consensusState, endpoint.Chain.SenderAccount.GetAddress().String(),
+		clientState, consensusState, endpoint.Chain.SenderAccount.GetAddress(),
 	)
 	require.NoError(endpoint.Chain.t, err)
 
@@ -149,7 +149,7 @@ func (endpoint *Endpoint) UpdateClient() (err error) {
 
 	msg, err := clienttypes.NewMsgUpdateClient(
 		endpoint.ClientID, header,
-		endpoint.Chain.SenderAccount.GetAddress().String(),
+		endpoint.Chain.SenderAccount.GetAddress(),
 	)
 	require.NoError(endpoint.Chain.t, err)
 

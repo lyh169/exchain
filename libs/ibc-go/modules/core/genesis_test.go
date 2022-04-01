@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	tmproto "github.com/okex/exchain/libs/tendermint/proto/tendermint/types"
 	"github.com/stretchr/testify/suite"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	ibc "github.com/okex/exchain/libs/ibc-go/modules/core"
