@@ -1,12 +1,12 @@
 package simapp
 
 import (
-	abci "github.com/tendermint/tendermint/abci/types"
-
-	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/module"
+	abci "github.com/okex/exchain/libs/tendermint/abci/types"
+
+	//"github.com/okex/exchain/libs/cosmos-sdk/server/types"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
+	"github.com/okex/exchain/libs/cosmos-sdk/types/module"
 )
 
 // App implements the common methods for a Cosmos SDK-based application
@@ -17,7 +17,7 @@ type App interface {
 
 	// The application types codec.
 	// NOTE: This shoult be sealed before being returned.
-	LegacyAmino() *codec.LegacyAmino
+	//LegacyAmino() *codec.LegacyAmino
 
 	// Application updates every begin block.
 	BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock

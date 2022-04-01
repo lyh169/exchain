@@ -5,23 +5,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	kmultisig "github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
-	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
-	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
-	"github.com/cosmos/cosmos-sdk/testutil"
-	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
-	"github.com/cosmos/cosmos-sdk/testutil/network"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/rest"
-	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
-	authcli "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
-	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	"github.com/okex/exchain/libs/cosmos-sdk/baseapp"
+	"github.com/okex/exchain/libs/cosmos-sdk/client/flags"
+	"github.com/okex/exchain/libs/cosmos-sdk/crypto/hd"
+	"github.com/okex/exchain/libs/cosmos-sdk/crypto/keyring"
+	kmultisig "github.com/okex/exchain/libs/cosmos-sdk/crypto/keys/multisig"
+	cryptotypes "github.com/okex/exchain/libs/cosmos-sdk/crypto/types"
+	servertypes "github.com/okex/exchain/libs/cosmos-sdk/server/types"
+	storetypes "github.com/okex/exchain/libs/cosmos-sdk/store/types"
+	"github.com/okex/exchain/libs/cosmos-sdk/testutil"
+	clitestutil "github.com/okex/exchain/libs/cosmos-sdk/testutil/cli"
+	"github.com/okex/exchain/libs/cosmos-sdk/testutil/network"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
+	"github.com/okex/exchain/libs/cosmos-sdk/types/rest"
+	txtypes "github.com/okex/exchain/libs/cosmos-sdk/types/tx"
+	authcli "github.com/okex/exchain/libs/cosmos-sdk/x/auth/client/cli"
+	authrest "github.com/okex/exchain/libs/cosmos-sdk/x/auth/client/rest"
+	authtypes "github.com/okex/exchain/libs/cosmos-sdk/x/auth/types"
 	"github.com/okex/exchain/libs/ibc-go/testing/simapp/params"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/suite"
@@ -34,7 +34,7 @@ import (
 
 /*
 	This file contains tests from the SDK which had to deleted during the migration of
-	the IBC module from the SDK into this repository. https://github.com/cosmos/cosmos-sdk/pull/8735
+	the IBC module from the SDK into this repository. https://github.com/okex/exchain/libs/cosmos-sdk/pull/8735
 
 	They can be removed once the SDK deprecates amino.
 */
