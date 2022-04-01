@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tendermint/tendermint/crypto/tmhash"
-	tmtypes "github.com/tendermint/tendermint/types"
+	"github.com/okex/exchain/libs/tendermint/crypto/tmhash"
+	tmtypes "github.com/okex/exchain/libs/tendermint/types"
 
 	clienttypes "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	commitmenttypes "github.com/okex/exchain/libs/ibc-go/modules/core/23-commitment/types"
@@ -24,7 +24,8 @@ func (suite *TendermintTestSuite) TestCheckMisbehaviourAndUpdateState() {
 
 	// Create bothValSet with both suite validator and altVal
 	bothValSet := tmtypes.NewValidatorSet(append(suite.valSet.Validators, altVal))
-	bothValsHash := bothValSet.Hash()
+	//todo ywmet Hash height 1
+	bothValsHash := bothValSet.Hash(1)
 	// Create alternative validator set with only altVal
 	altValSet := tmtypes.NewValidatorSet([]*tmtypes.Validator{altVal})
 

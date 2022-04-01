@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	tmtypes "github.com/tendermint/tendermint/types"
+	tmtypes "github.com/okex/exchain/libs/tendermint/types"
 
 	clienttypes "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	commitmenttypes "github.com/okex/exchain/libs/ibc-go/modules/core/23-commitment/types"
@@ -76,7 +76,7 @@ func (suite *TendermintTestSuite) TestCheckHeaderAndUpdateState() {
 			name: "successful update with next height and different validator set",
 			setup: func(suite *TendermintTestSuite) {
 				clientState = types.NewClientState(chainID, types.DefaultTrustLevel, trustingPeriod, ubdPeriod, maxClockDrift, height, commitmenttypes.GetSDKSpecs(), upgradePath, false, false)
-				consensusState = types.NewConsensusState(suite.clientTime, commitmenttypes.NewMerkleRoot(suite.header.Header.GetAppHash()), bothValSet.Hash())
+				consensusState = types.NewConsensusState(suite.clientTime, commitmenttypes.NewMerkleRoot(suite.header.Header.GetAppHash()), bothValSet.Hash(int64(height.RevisionHeight)))
 				newHeader = suite.chainA.CreateTMClientHeader(chainID, int64(heightPlus1.RevisionHeight), height, suite.headerTime, bothValSet, bothValSet, bothSigners)
 				currentTime = suite.now
 			},
@@ -219,7 +219,7 @@ func (suite *TendermintTestSuite) TestCheckHeaderAndUpdateState() {
 			name: "unsuccessful update with next height: update header mismatches different nextValSetHash",
 			setup: func(suite *TendermintTestSuite) {
 				clientState = types.NewClientState(chainID, types.DefaultTrustLevel, trustingPeriod, ubdPeriod, maxClockDrift, height, commitmenttypes.GetSDKSpecs(), upgradePath, false, false)
-				consensusState = types.NewConsensusState(suite.clientTime, commitmenttypes.NewMerkleRoot(suite.header.Header.GetAppHash()), bothValSet.Hash())
+				consensusState = types.NewConsensusState(suite.clientTime, commitmenttypes.NewMerkleRoot(suite.header.Header.GetAppHash()), bothValSet.Hash(int64(height.RevisionHeight)))
 				newHeader = suite.chainA.CreateTMClientHeader(chainID, int64(heightPlus1.RevisionHeight), height, suite.headerTime, suite.valSet, bothValSet, signers)
 				currentTime = suite.now
 			},

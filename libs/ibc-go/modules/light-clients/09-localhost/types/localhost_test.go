@@ -3,11 +3,11 @@ package types_test
 import (
 	"testing"
 
+	tmproto "github.com/okex/exchain/libs/tendermint/abci/types"
 	"github.com/stretchr/testify/suite"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/okex/exchain/libs/cosmos-sdk/codec"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 	clienttypes "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/exported"
 	"github.com/okex/exchain/libs/ibc-go/testing/simapp"
@@ -24,7 +24,7 @@ var (
 type LocalhostTestSuite struct {
 	suite.Suite
 
-	cdc   codec.Codec
+	cdc   *codec.CodecProxy
 	ctx   sdk.Context
 	store sdk.KVStore
 }

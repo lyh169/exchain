@@ -6,17 +6,17 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/codec"
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/module"
-	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
-	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/okex/exchain/libs/cosmos-sdk/client/context"
+	"github.com/okex/exchain/libs/cosmos-sdk/codec"
+	codectypes "github.com/okex/exchain/libs/cosmos-sdk/codec/types"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
+	"github.com/okex/exchain/libs/cosmos-sdk/types/module"
+	capabilitykeeper "github.com/okex/exchain/libs/cosmos-sdk/x/capability/keeper"
+	capabilitytypes "github.com/okex/exchain/libs/cosmos-sdk/x/capability/types"
+	abci "github.com/okex/exchain/libs/tendermint/abci/types"
 	"github.com/spf13/cobra"
-	abci "github.com/tendermint/tendermint/abci/types"
 
 	channeltypes "github.com/okex/exchain/libs/ibc-go/modules/core/04-channel/types"
 	host "github.com/okex/exchain/libs/ibc-go/modules/core/24-host"
@@ -57,7 +57,7 @@ func (AppModuleBasic) Name() string {
 }
 
 // RegisterLegacyAminoCodec implements AppModuleBasic interface.
-func (AppModuleBasic) RegisterLegacyAminoCodec(*codec.LegacyAmino) {}
+//func (AppModuleBasic) RegisterLegacyAminoCodec(*codec.LegacyAmino) {}
 
 // RegisterInterfaces implements AppModuleBasic interface.
 func (AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) {}
@@ -68,15 +68,15 @@ func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 }
 
 // ValidateGenesis implements the AppModuleBasic interface.
-func (AppModuleBasic) ValidateGenesis(codec.JSONCodec, client.TxEncodingConfig, json.RawMessage) error {
+func (AppModuleBasic) ValidateGenesis(codec.JSONCodec /*client.TxEncodingConfig,*/, json.RawMessage) error {
 	return nil
 }
 
 // RegisterRESTRoutes implements AppModuleBasic interface.
-func (AppModuleBasic) RegisterRESTRoutes(clientCtx client.Context, rtr *mux.Router) {}
+func (AppModuleBasic) RegisterRESTRoutes(clientCtx context.CLIContext, rtr *mux.Router) {}
 
 // RegisterGRPCGatewayRoutes implements AppModuleBasic interface.
-func (a AppModuleBasic) RegisterGRPCGatewayRoutes(_ client.Context, _ *runtime.ServeMux) {}
+func (a AppModuleBasic) RegisterGRPCGatewayRoutes(_ context.CLIContext, _ *runtime.ServeMux) {}
 
 // GetTxCmd implements AppModuleBasic interface.
 func (AppModuleBasic) GetTxCmd() *cobra.Command {
@@ -117,9 +117,9 @@ func (AppModule) QuerierRoute() string {
 }
 
 // LegacyQuerierHandler implements the AppModule interface.
-func (am AppModule) LegacyQuerierHandler(*codec.LegacyAmino) sdk.Querier {
-	return nil
-}
+// func (am AppModule) LegacyQuerierHandler(*codec.LegacyAmino) sdk.Querier {
+// 	return nil
+// }
 
 // RegisterServices implements the AppModule interface.
 func (am AppModule) RegisterServices(module.Configurator) {}

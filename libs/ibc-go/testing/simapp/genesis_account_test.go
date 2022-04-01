@@ -4,13 +4,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	//"github.com/okex/exchain/libs/cosmos-sdk/crypto/keys/secp256k1"
+
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
+	authtypes "github.com/okex/exchain/libs/cosmos-sdk/x/auth"
 	"github.com/okex/exchain/libs/ibc-go/testing/simapp"
 
+	"github.com/okex/exchain/libs/tendermint/crypto"
+	"github.com/okex/exchain/libs/tendermint/crypto/secp256k1"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/crypto"
 )
 
 func TestSimGenesisAccountValidate(t *testing.T) {
@@ -20,7 +22,8 @@ func TestSimGenesisAccountValidate(t *testing.T) {
 	vestingStart := time.Now().UTC()
 
 	coins := sdk.NewCoins(sdk.NewInt64Coin("test", 1000))
-	baseAcc := authtypes.NewBaseAccount(addr, pubkey, 0, 0)
+	//balance := sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, 1000))
+	baseAcc := authtypes.NewBaseAccount(addr, coins, pubkey, 0, 0)
 
 	testCases := []struct {
 		name    string
@@ -37,14 +40,14 @@ func TestSimGenesisAccountValidate(t *testing.T) {
 		{
 			"invalid basic account with mismatching address/pubkey",
 			simapp.SimGenesisAccount{
-				BaseAccount: authtypes.NewBaseAccount(addr, secp256k1.GenPrivKey().PubKey(), 0, 0),
+				BaseAccount: authtypes.NewBaseAccount(addr, coins, secp256k1.GenPrivKey().PubKey(), 0, 0),
 			},
 			true,
 		},
 		{
 			"valid basic account with module name",
 			simapp.SimGenesisAccount{
-				BaseAccount: authtypes.NewBaseAccount(sdk.AccAddress(crypto.AddressHash([]byte("testmod"))), nil, 0, 0),
+				BaseAccount: authtypes.NewBaseAccount(sdk.AccAddress(crypto.AddressHash([]byte("testmod"))), coins, nil, 0, 0),
 				ModuleName:  "testmod",
 			},
 			false,

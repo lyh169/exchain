@@ -1,7 +1,7 @@
 package ante
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 	clienttypes "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	channelkeeper "github.com/okex/exchain/libs/ibc-go/modules/core/04-channel/keeper"
 	channeltypes "github.com/okex/exchain/libs/ibc-go/modules/core/04-channel/types"

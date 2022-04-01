@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/x/staking/teststaking"
 	"github.com/okex/exchain/libs/cosmos-sdk/codec"
 	cryptotypes "github.com/okex/exchain/libs/cosmos-sdk/crypto/types"
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 	sdkerrors "github.com/okex/exchain/libs/cosmos-sdk/types/errors"
 	"github.com/okex/exchain/libs/cosmos-sdk/x/auth"
 	authtypes "github.com/okex/exchain/libs/cosmos-sdk/x/auth/exported"
+	"github.com/okex/exchain/libs/cosmos-sdk/x/staking/teststaking"
 
 	//banktypes "github.com/okex/exchain/libs/cosmos-sdk/x/bank/types"
 	capabilitykeeper "github.com/okex/exchain/libs/cosmos-sdk/x/capability/keeper"
@@ -54,7 +54,7 @@ type TestChain struct {
 	CurrentHeader tmproto.Header     // header for current block height
 	QueryServer   types.QueryServer
 	//TxConfig      client.TxConfig
-	Codec *codec.ProtoCodec
+	Codec *codec.CodecProxy
 
 	Vals    *tmtypes.ValidatorSet
 	Signers []tmtypes.PrivValidator

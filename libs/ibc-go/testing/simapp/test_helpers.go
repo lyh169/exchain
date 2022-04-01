@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	bam "github.com/okex/exchain/libs/cosmos-sdk/baseapp"
-	"github.com/okex/exchain/libs/cosmos-sdk/client"
 	cryptotypes "github.com/okex/exchain/libs/cosmos-sdk/crypto/types"
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 	"github.com/okex/exchain/libs/cosmos-sdk/types/errors"
@@ -241,7 +240,7 @@ func SignAndDeliver(
 ) (sdk.GasInfo, *sdk.Result, error) {
 
 	tx, err := helpers.GenTx(
-		txCfg,
+		//txCfg,
 		msgs,
 		sdk.Coins{sdk.NewInt64Coin(sdk.DefaultBondDenom, 0)},
 		helpers.DefaultGenTxGas,
@@ -254,7 +253,7 @@ func SignAndDeliver(
 
 	// Simulate a sending a transaction and committing a block
 	app.BeginBlock(abci.RequestBeginBlock{Header: header})
-	gInfo, res, err := app.Deliver(txCfg.TxEncoder(), tx)
+	gInfo, res, err := app.Deliver(tx)
 
 	if expPass {
 		require.NoError(t, err)
@@ -265,7 +264,8 @@ func SignAndDeliver(
 	}
 
 	app.EndBlock(abci.RequestEndBlock{})
-	app.Commit()
+	//todo ywmet nil
+	app.Commit(abci.RequestCommit{})
 
 	return gInfo, res, err
 }
@@ -273,12 +273,12 @@ func SignAndDeliver(
 // GenSequenceOfTxs generates a set of signed transactions of messages, such
 // that they differ only by having the sequence numbers incremented between
 // every transaction.
-func GenSequenceOfTxs(txGen client.TxConfig, msgs []sdk.Msg, accNums []uint64, initSeqNums []uint64, numToGenerate int, priv ...cryptotypes.PrivKey) ([]sdk.Tx, error) {
+func GenSequenceOfTxs( /*txGen client.TxConfig,*/ msgs []sdk.Msg, accNums []uint64, initSeqNums []uint64, numToGenerate int, priv ...cryptotypes.PrivKey) ([]sdk.Tx, error) {
 	txs := make([]sdk.Tx, numToGenerate)
 	var err error
 	for i := 0; i < numToGenerate; i++ {
 		txs[i], err = helpers.GenTx(
-			txGen,
+			//txGen,
 			msgs,
 			sdk.Coins{sdk.NewInt64Coin(sdk.DefaultBondDenom, 0)},
 			helpers.DefaultGenTxGas,

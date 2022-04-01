@@ -5,10 +5,10 @@ import (
 	"os"
 	"testing"
 
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
+	tmproto "github.com/okex/exchain/libs/tendermint/abci/types"
 
-	simtypes "github.com/okex/exchain/libs/cosmos-sdk/types/simulation"
 	"github.com/okex/exchain/libs/cosmos-sdk/x/simulation"
+	simtypes "github.com/okex/exchain/libs/cosmos-sdk/x/simulation"
 )
 
 // Profile with:
@@ -74,7 +74,7 @@ func BenchmarkInvariants(b *testing.B) {
 		}
 	}()
 
-	app := NewSimApp(logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, FlagPeriodValue, MakeTestEncodingConfig(), EmptyAppOptions{}, interBlockCacheOpt())
+	app := NewSimApp(logger, db, nil, true, map[int64]bool{}, FlagPeriodValue, interBlockCacheOpt())
 
 	// run randomized simulation
 	_, simParams, simErr := simulation.SimulateFromSeed(

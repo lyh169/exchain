@@ -1,7 +1,7 @@
 package types_test
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 	clienttypes "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	connectiontypes "github.com/okex/exchain/libs/ibc-go/modules/core/03-connection/types"
 	channeltypes "github.com/okex/exchain/libs/ibc-go/modules/core/04-channel/types"
@@ -199,7 +199,7 @@ func (suite *LocalhostTestSuite) TestVerifyConnectionState() {
 			name:        "proof verification success",
 			clientState: types.NewClientState("chainID", clientHeight),
 			malleate: func() {
-				bz, err := suite.cdc.Marshal(&conn1)
+				bz, err := suite.cdc.GetCdc().MarshalBinaryBare(&conn1)
 				suite.Require().NoError(err)
 				suite.store.Set(host.ConnectionKey(testConnectionID), bz)
 			},
@@ -226,7 +226,7 @@ func (suite *LocalhostTestSuite) TestVerifyConnectionState() {
 			name:        "proof verification failed: different connection stored",
 			clientState: types.NewClientState("chainID", clientHeight),
 			malleate: func() {
-				bz, err := suite.cdc.Marshal(&conn2)
+				bz, err := suite.cdc.GetCdc().MarshalBinaryBare(&conn2)
 				suite.Require().NoError(err)
 				suite.store.Set(host.ConnectionKey(testConnectionID), bz)
 			},
@@ -271,7 +271,7 @@ func (suite *LocalhostTestSuite) TestVerifyChannelState() {
 			name:        "proof verification success",
 			clientState: types.NewClientState("chainID", clientHeight),
 			malleate: func() {
-				bz, err := suite.cdc.Marshal(&ch1)
+				bz, err := suite.cdc.GetCdc().MarshalBinaryBare(&ch1)
 				suite.Require().NoError(err)
 				suite.store.Set(host.ChannelKey(testPortID, testChannelID), bz)
 			},
@@ -299,7 +299,7 @@ func (suite *LocalhostTestSuite) TestVerifyChannelState() {
 			name:        "proof verification failed: different channel stored",
 			clientState: types.NewClientState("chainID", clientHeight),
 			malleate: func() {
-				bz, err := suite.cdc.Marshal(&ch2)
+				bz, err := suite.cdc.GetCdc().MarshalBinaryBare(&ch2)
 				suite.Require().NoError(err)
 				suite.store.Set(host.ChannelKey(testPortID, testChannelID), bz)
 

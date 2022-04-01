@@ -4,13 +4,13 @@ import (
 	"testing"
 	"time"
 
+	tmproto "github.com/okex/exchain/libs/tendermint/abci/types"
+	tmbytes "github.com/okex/exchain/libs/tendermint/libs/bytes"
+	tmtypes "github.com/okex/exchain/libs/tendermint/types"
 	"github.com/stretchr/testify/suite"
-	tmbytes "github.com/tendermint/tendermint/libs/bytes"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	tmtypes "github.com/tendermint/tendermint/types"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/okex/exchain/libs/cosmos-sdk/codec"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 	clienttypes "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	ibctmtypes "github.com/okex/exchain/libs/ibc-go/modules/light-clients/07-tendermint/types"
 	ibctesting "github.com/okex/exchain/libs/ibc-go/testing"
@@ -45,7 +45,7 @@ type TendermintTestSuite struct {
 
 	// TODO: deprecate usage in favor of testing package
 	ctx        sdk.Context
-	cdc        codec.Codec
+	cdc        *codec.CodecProxy
 	privVal    tmtypes.PrivValidator
 	valSet     *tmtypes.ValidatorSet
 	valsHash   tmbytes.HexBytes
@@ -85,7 +85,7 @@ func (suite *TendermintTestSuite) SetupTest() {
 
 	val := tmtypes.NewValidator(pubKey, 10)
 	suite.valSet = tmtypes.NewValidatorSet([]*tmtypes.Validator{val})
-	suite.valsHash = suite.valSet.Hash()
+	suite.valsHash = suite.valSet.Hash(1)
 	suite.header = suite.chainA.CreateTMClientHeader(chainID, int64(height.RevisionHeight), heightMinus1, suite.now, suite.valSet, suite.valSet, []tmtypes.PrivValidator{suite.privVal})
 	suite.ctx = app.BaseApp.NewContext(checkTx, tmproto.Header{Height: 1, Time: suite.now})
 }

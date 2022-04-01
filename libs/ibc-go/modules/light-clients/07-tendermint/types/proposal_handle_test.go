@@ -22,11 +22,11 @@ func (suite *TendermintTestSuite) TestCheckSubstituteUpdateStateBasic() {
 		name     string
 		malleate func()
 	}{
-		{
-			"solo machine used for substitute", func() {
-				substituteClientState = ibctesting.NewSolomachine(suite.T(), suite.cdc, "solo machine", "", 1).ClientState()
-			},
-		},
+		// {
+		// 	"solo machine used for substitute", func() {
+		// 		substituteClientState = ibctesting.NewSolomachine(suite.T(), suite.cdc, "solo machine", "", 1).ClientState()
+		// 	},
+		// },
 		{
 			"non-matching substitute", func() {
 				suite.coordinator.SetupClients(substitutePath)
