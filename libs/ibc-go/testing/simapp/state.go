@@ -8,12 +8,13 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/okex/exchain/libs/tendermint/crypto/secp256k1"
 	//	tmjson "github.com/okex/exchain/libs/tendermint/libs/json"
 	tmtypes "github.com/okex/exchain/libs/tendermint/types"
 
 	//stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/okex/exchain/libs/cosmos-sdk/codec"
-	"github.com/okex/exchain/libs/cosmos-sdk/crypto/keys/secp256k1"
+	//	"github.com/okex/exchain/libs/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 	"github.com/okex/exchain/libs/cosmos-sdk/types/module"
 	stakingtypes "github.com/okex/exchain/libs/cosmos-sdk/x/staking/types"
@@ -221,15 +222,10 @@ func AppStateFromGenesisFileFn(r io.Reader, cdc codec.JSONCodec, genesisFile str
 			panic(err)
 		}
 
-		privKey := secp256k1.GenPrivKeyFromSecret(privkeySeed)
-
-		a, ok := acc.GetCachedValue().(authtypes.AccountI)
-		if !ok {
-			panic("expected account")
-		}
+		privKey := secp256k1.GenPrivKeySecp256k1(privkeySeed)
 
 		// create simulator accounts
-		simAcc := simtypes.Account{PrivKey: privKey, PubKey: privKey.PubKey(), Address: a.GetAddress()}
+		simAcc := simtypes.Account{PrivKey: privKey, PubKey: privKey.PubKey(), Address: acc.GetAddress()}
 		newAccs[i] = simAcc
 	}
 
