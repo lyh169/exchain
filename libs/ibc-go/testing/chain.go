@@ -13,8 +13,6 @@ import (
 	sdkerrors "github.com/okex/exchain/libs/cosmos-sdk/types/errors"
 	"github.com/okex/exchain/libs/cosmos-sdk/x/auth"
 	authtypes "github.com/okex/exchain/libs/cosmos-sdk/x/auth/exported"
-	"github.com/okex/exchain/libs/cosmos-sdk/x/staking/teststaking"
-
 	//banktypes "github.com/okex/exchain/libs/cosmos-sdk/x/bank/types"
 	capabilitykeeper "github.com/okex/exchain/libs/cosmos-sdk/x/capability/keeper"
 	capabilitytypes "github.com/okex/exchain/libs/cosmos-sdk/x/capability/types"
@@ -310,11 +308,12 @@ func (chain *TestChain) GetValsAtHeight(height int64) (*tmtypes.ValidatorSet, bo
 
 	valSet := stakingtypes.Validators(histInfo.ValSet)
 
-	tmValidators, err := teststaking.ToTmValidators(valSet, sdk.DefaultPowerReduction)
-	if err != nil {
-		panic(err)
+	validators := make([]*tmtypes.Validator, len(valSet))
+	for i, val := range valSet {
+		validators[i] = tmtypes.NewValidator(val.GetConsPubKey(), sdk.PowerReduction.Int64())
 	}
-	return tmtypes.NewValidatorSet(tmValidators), true
+
+	return tmtypes.NewValidatorSet(validators), true
 }
 
 // GetAcknowledgement retrieves an acknowledgement for the provided packet. If the
