@@ -7,26 +7,24 @@ import (
 	"os"
 	"testing"
 
+	abci "github.com/okex/exchain/libs/tendermint/abci/types"
+	"github.com/okex/exchain/libs/tendermint/libs/log"
+	dbm "github.com/okex/exchain/libs/tm-db"
 	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/log"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
 
 	"github.com/okex/exchain/libs/cosmos-sdk/baseapp"
 	"github.com/okex/exchain/libs/cosmos-sdk/store"
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
-	simtypes "github.com/okex/exchain/libs/cosmos-sdk/types/simulation"
 	authtypes "github.com/okex/exchain/libs/cosmos-sdk/x/auth/types"
 	banktypes "github.com/okex/exchain/libs/cosmos-sdk/x/bank"
 	capabilitytypes "github.com/okex/exchain/libs/cosmos-sdk/x/capability/types"
 	distrtypes "github.com/okex/exchain/libs/cosmos-sdk/x/distribution/types"
-	evidencetypes "github.com/okex/exchain/libs/cosmos-sdk/x/evidence/types"
+	evidencetypes "github.com/okex/exchain/libs/cosmos-sdk/x/evidence"
 	govtypes "github.com/okex/exchain/libs/cosmos-sdk/x/gov/types"
-	minttypes "github.com/okex/exchain/libs/cosmos-sdk/x/mint/types"
+	minttypes "github.com/okex/exchain/libs/cosmos-sdk/x/mint"
 	paramtypes "github.com/okex/exchain/libs/cosmos-sdk/x/params/types"
 	"github.com/okex/exchain/libs/cosmos-sdk/x/simulation"
-	slashingtypes "github.com/okex/exchain/libs/cosmos-sdk/x/slashing/types"
+	slashingtypes "github.com/okex/exchain/libs/cosmos-sdk/x/slashing"
 	stakingtypes "github.com/okex/exchain/libs/cosmos-sdk/x/staking/types"
 	ibctransfertypes "github.com/okex/exchain/libs/ibc-go/modules/apps/transfer/types"
 	ibchost "github.com/okex/exchain/libs/ibc-go/modules/core/24-host"
@@ -76,12 +74,11 @@ func TestFullAppSimulation(t *testing.T) {
 		t,
 		os.Stdout,
 		app.BaseApp,
-		AppStateFn(app.AppCodec().GetProtocMarshal(), app.SimulationManager()),
-		simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
-		SimulationOperations(app, app.AppCodec(), config),
+		AppStateFn(*app.AppCodec(), app.SimulationManager()),
+		//		simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
+		SimulationOperations(app, *app.AppCodec().GetCdc(), config),
 		app.ModuleAccountAddrs(),
 		config,
-		app.AppCodec(),
 	)
 
 	// export state and simParams before the simulation error is checked
@@ -114,12 +111,11 @@ func TestAppImportExport(t *testing.T) {
 		t,
 		os.Stdout,
 		app.BaseApp,
-		AppStateFn(app.AppCodec().GetProtocMarshal(), app.SimulationManager()),
-		simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
-		SimulationOperations(app, app.AppCodec(), config),
+		AppStateFn(*app.AppCodec(), app.SimulationManager()),
+		//		simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
+		SimulationOperations(app, *app.AppCodec().GetCdc(), config),
 		app.ModuleAccountAddrs(),
 		config,
-		app.AppCodec(),
 	)
 
 	// export state and simParams before the simulation error is checked
@@ -133,7 +129,7 @@ func TestAppImportExport(t *testing.T) {
 
 	fmt.Printf("exporting genesis...\n")
 
-	exported, err := app.ExportAppStateAndValidators(false, []string{})
+	exported, _, err := app.ExportAppStateAndValidators(false, []string{})
 	require.NoError(t, err)
 
 	fmt.Printf("importing genesis...\n")
@@ -146,17 +142,18 @@ func TestAppImportExport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(newDir))
 	}()
 
-	newApp := NewSimApp(log.NewNopLogger(), newDB, nil, true, map[int64]bool{}, FlagPeriodValue, EmptyAppOptions{}, fauxMerkleModeOpt)
+	newApp := NewSimApp(log.NewNopLogger(), newDB, nil, true, map[int64]bool{}, FlagPeriodValue /*EmptyAppOptions{},*/, fauxMerkleModeOpt)
 	require.Equal(t, "SimApp", newApp.Name())
 
 	var genesisState GenesisState
-	err = json.Unmarshal(exported.AppState, &genesisState)
+	err = json.Unmarshal(exported, &genesisState)
 	require.NoError(t, err)
 
-	ctxA := app.NewContext(true, tmproto.Header{Height: app.LastBlockHeight()})
-	ctxB := newApp.NewContext(true, tmproto.Header{Height: app.LastBlockHeight()})
+	ctxA := app.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
+	ctxB := newApp.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
 	newApp.mm.InitGenesis(ctxB, genesisState)
-	newApp.StoreConsensusParams(ctxB, exported.ConsensusParams)
+	// todo as app/simulation_test
+	//newApp.StoreConsensusParams(ctxB, exported.ConsensusParams)
 
 	fmt.Printf("comparing stores...\n")
 
@@ -170,8 +167,11 @@ func TestAppImportExport(t *testing.T) {
 		{app.keys[slashingtypes.StoreKey], newApp.keys[slashingtypes.StoreKey], [][]byte{}},
 		{app.keys[minttypes.StoreKey], newApp.keys[minttypes.StoreKey], [][]byte{}},
 		{app.keys[distrtypes.StoreKey], newApp.keys[distrtypes.StoreKey], [][]byte{}},
-		{app.keys[banktypes.StoreKey], newApp.keys[banktypes.StoreKey], [][]byte{banktypes.BalancesPrefix}},
-		{app.keys[paramtypes.StoreKey], newApp.keys[paramtypes.StoreKey], [][]byte{}},
+		// todo check bank types
+		//		{app.keys[banktypes.StoreKey], newApp.keys[banktypes.StoreKey], [][]byte{banktypes.BalancesPrefix}},
+		{app.keys[banktypes.ModuleName], newApp.keys[banktypes.ModuleName], [][]byte{}},
+		//		{app.keys[paramtypes.StoreKey], newApp.keys[paramtypes.StoreKey], [][]byte{}},
+		{app.keys[paramtypes.ModuleName], newApp.keys[paramtypes.ModuleName], [][]byte{}},
 		{app.keys[govtypes.StoreKey], newApp.keys[govtypes.StoreKey], [][]byte{}},
 		{app.keys[evidencetypes.StoreKey], newApp.keys[evidencetypes.StoreKey], [][]byte{}},
 		{app.keys[capabilitytypes.StoreKey], newApp.keys[capabilitytypes.StoreKey], [][]byte{}},
@@ -212,12 +212,11 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		t,
 		os.Stdout,
 		app.BaseApp,
-		AppStateFn(app.AppCodec(), app.SimulationManager()),
-		simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
-		SimulationOperations(app, app.AppCodec(), config),
+		AppStateFn(*app.AppCodec(), app.SimulationManager()),
+		//		simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
+		SimulationOperations(app, *app.AppCodec().GetCdc(), config),
 		app.ModuleAccountAddrs(),
 		config,
-		app.AppCodec(),
 	)
 
 	// export state and simParams before the simulation error is checked
@@ -236,7 +235,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 
 	fmt.Printf("exporting genesis...\n")
 
-	exported, err := app.ExportAppStateAndValidators(true, []string{})
+	exported, _, err := app.ExportAppStateAndValidators(true, []string{})
 	require.NoError(t, err)
 
 	fmt.Printf("importing genesis...\n")
@@ -249,23 +248,25 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(newDir))
 	}()
 
-	newApp := NewSimApp(log.NewNopLogger(), newDB, nil, true, map[int64]bool{}, DefaultNodeHome, FlagPeriodValue, MakeTestEncodingConfig(), EmptyAppOptions{}, fauxMerkleModeOpt)
+	// todo MakeTestEncodingConfig()
+	//	newApp := NewSimApp(log.NewNopLogger(), newDB, nil, true, map[int64]bool{}, DefaultNodeHome, FlagPeriodValue, MakeTestEncodingConfig(), fauxMerkleModeOpt)
+	newApp := NewSimApp(log.NewNopLogger(), newDB, nil, true, map[int64]bool{}, FlagPeriodValue, fauxMerkleModeOpt)
+
 	require.Equal(t, "SimApp", newApp.Name())
 
 	newApp.InitChain(abci.RequestInitChain{
-		AppStateBytes: exported.AppState,
+		AppStateBytes: exported,
 	})
 
 	_, _, err = simulation.SimulateFromSeed(
 		t,
 		os.Stdout,
 		newApp.GetBaseApp(),
-		AppStateFn(app.AppCodec(), app.SimulationManager()),
-		simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
-		SimulationOperations(newApp, newApp.AppCodec(), config),
+		AppStateFn(*app.AppCodec(), app.SimulationManager()),
+		//		simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
+		SimulationOperations(newApp, *newApp.AppCodec().GetCdc(), config),
 		app.ModuleAccountAddrs(),
 		config,
-		app.AppCodec(),
 	)
 	require.NoError(t, err)
 }
@@ -300,7 +301,9 @@ func TestAppStateDeterminism(t *testing.T) {
 			}
 
 			db := dbm.NewMemDB()
-			app := NewSimApp(logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, FlagPeriodValue, MakeTestEncodingConfig(), EmptyAppOptions{}, interBlockCacheOpt())
+			// todo MakeTestEncodingConfig EmptyAppOptions
+			//	app := NewSimApp(logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, FlagPeriodValue, MakeTestEncodingConfig(), EmptyAppOptions{}, interBlockCacheOpt())
+			app := NewSimApp(logger, db, nil, true, map[int64]bool{}, FlagPeriodValue, interBlockCacheOpt())
 
 			fmt.Printf(
 				"running non-determinism simulation; seed %d: %d/%d, attempt: %d/%d\n",
@@ -311,12 +314,11 @@ func TestAppStateDeterminism(t *testing.T) {
 				t,
 				os.Stdout,
 				app.BaseApp,
-				AppStateFn(app.AppCodec(), app.SimulationManager()),
-				simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
-				SimulationOperations(app, app.AppCodec(), config),
+				AppStateFn(*app.AppCodec(), app.SimulationManager()),
+				//		simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
+				SimulationOperations(app, *app.AppCodec().GetCdc(), config),
 				app.ModuleAccountAddrs(),
 				config,
-				app.AppCodec(),
 			)
 			require.NoError(t, err)
 
