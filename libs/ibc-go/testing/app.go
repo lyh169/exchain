@@ -2,6 +2,7 @@ package ibctesting
 
 import (
 	"encoding/json"
+	authtypes "github.com/okex/exchain/libs/cosmos-sdk/x/auth/types"
 	"testing"
 
 	//cryptocodec "github.com/okex/exchain/app/crypto/ethsecp256k1"
@@ -12,7 +13,6 @@ import (
 
 	//authtypes "github.com/okex/exchain/libs/cosmos-sdk/x/auth/types"
 
-	banktypes "github.com/okex/exchain/libs/cosmos-sdk/x/bank"
 	capabilitykeeper "github.com/okex/exchain/libs/cosmos-sdk/x/capability/keeper"
 	stakingtypes "github.com/okex/exchain/libs/cosmos-sdk/x/staking/types"
 	abci "github.com/okex/exchain/libs/tendermint/abci/types"
@@ -49,16 +49,16 @@ type TestingApp interface {
 
 func SetupTestingApp() (TestingApp, map[string]json.RawMessage) {
 	db := dbm.NewMemDB()
-	encCdc := simapp.MakeTestEncodingConfig()
+	//encCdc := simapp.MakeTestEncodingConfig()
 	app := simapp.NewSimApp(log.NewNopLogger(), db, nil, true, map[int64]bool{}, 5)
-	return app, simapp.NewDefaultGenesisState(encCdc.Marshaler)
+	return app, simapp.NewDefaultGenesisState(nil)
 }
 
 // SetupWithGenesisValSet initializes a new SimApp with a validator set and genesis accounts
 // that also act as delegators. For simplicity, each validator is bonded with a delegation
 // of one consensus engine unit (10^6) in the default token of the simapp from first genesis
 // account. A Nop logger is set in SimApp.
-func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []authexported.GenesisAccount, balances ...banktypes.Balance) TestingApp {
+func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []authexported.GenesisAccount, balances ...sdk.Coins) TestingApp {
 	app, genesisState := DefaultTestingAppInit()
 	// set genesis accounts
 	authGenesis := authtypes.NewGenesisState(authtypes.DefaultParams(), genAccs)
@@ -95,11 +95,12 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	//stakingGenesis := stakingtypes.NewGenesisState(stakingtypes.DefaultParams(), validators, delegations)
 	//genesisState[stakingtypes.ModuleName] = app.AppCodec().MustMarshalJSON(stakingGenesis)
 
-	totalSupply := sdk.NewCoins()
-	for _, b := range balances {
-		// add genesis acc tokens and delegated tokens to total supply
-		totalSupply = totalSupply.Add(b.Coins.Add(sdk.NewCoin(sdk.DefaultBondDenom, bondAmt))...)
-	}
+	// todo bank genesis state file
+	//	totalSupply := sdk.NewCoins()
+	//	for _, b := range balances {
+	// add genesis acc tokens and delegated tokens to total supply
+	//		totalSupply = totalSupply.Add(b.Coins.Add(sdk.NewCoin(sdk.DefaultBondDenom, bondAmt))...)
+	//	}
 
 	// add bonded amount to bonded pool module account
 	// balances = append(balances, banktypes.Balance{
