@@ -14,8 +14,7 @@ import (
 
 	//stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/okex/exchain/libs/cosmos-sdk/codec"
-	//	"github.com/okex/exchain/libs/cosmos-sdk/crypto/keys/secp256k1"
-	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
+
 	"github.com/okex/exchain/libs/cosmos-sdk/types/module"
 	stakingtypes "github.com/okex/exchain/libs/cosmos-sdk/x/staking/types"
 	//banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -30,7 +29,7 @@ import (
 // AppStateFn returns the initial application state using a genesis or the simulation parameters.
 // It panics if the user provides files for both of them.
 // If a file is not given for the genesis or the sim params, it creates a randomized one.
-func AppStateFn(cdc codec.JSONCodec, simManager *module.SimulationManager) simtypes.AppStateFn {
+func AppStateFn(cdc codec.CodecProxy, simManager *module.SimulationManager) simtypes.AppStateFn {
 	return func(r *rand.Rand, accs []simtypes.Account, config simtypes.Config,
 	) (appState json.RawMessage, simAccs []simtypes.Account, chainID string, genesisTimestamp time.Time) {
 
@@ -88,39 +87,40 @@ func AppStateFn(cdc codec.JSONCodec, simManager *module.SimulationManager) simty
 		}
 
 		stakingState := new(stakingtypes.GenesisState)
-		err = cdc.UnmarshalJSON(stakingStateBz, stakingState)
+		err = cdc.GetCdc().UnmarshalJSON(stakingStateBz, stakingState)
 		if err != nil {
 			panic(err)
 		}
 		// compute not bonded balance
-		notBondedTokens := sdk.ZeroInt()
-		for _, val := range stakingState.Validators {
-			if val.Status != sdk.Unbonded {
-				continue
-			}
-			notBondedTokens = notBondedTokens.Add(val.GetTokens())
-		}
-		notBondedCoins := sdk.NewCoin(stakingState.Params.BondDenom, notBondedTokens)
+		// notBondedTokens := sdk.ZeroInt()
+		// for _, val := range stakingState.Validators {
+		//	if val.Status != sdk.Unbonded {
+		//		continue
+		//	}
+		//	notBondedTokens = notBondedTokens.Add(val.GetTokens())
+		// }
+		//	notBondedCoins := sdk.NewCoin(stakingState.Params.BondDenom, notBondedTokens)
 		// edit bank state to make it have the not bonded pool tokens
 		bankStateBz, ok := rawState[banktypes.ModuleName]
 		// TODO(fdymylja/jonathan): should we panic in this case
 		if !ok {
 			panic("bank genesis state is missing")
 		}
-		bankState := new(banktypes.GenesisState)
-		err = cdc.UnmarshalJSON(bankStateBz, bankState)
+		bankState := banktypes.NewGenesisState(true)
+		//		bankState := new(banktypes.GenesisState)
+		err = cdc.GetCdc().UnmarshalJSON(bankStateBz, bankState)
 		if err != nil {
 			panic(err)
 		}
-
-		bankState.Balances = append(bankState.Balances, banktypes.Balance{
-			Address: authtypes.NewModuleAddress(stakingtypes.NotBondedPoolName).String(),
-			Coins:   sdk.NewCoins(notBondedCoins),
-		})
+		// todo our genesis bank do not have balance infos
+		//		bankState.Balances = append(bankState.Balances, banktypes.Balance{
+		//			Address: authtypes.NewModuleAddress(stakingtypes.NotBondedPoolName).String(),
+		//			Coins:   sdk.NewCoins(notBondedCoins),
+		//		})
 
 		// change appState back
-		rawState[stakingtypes.ModuleName] = cdc.MustMarshalJSON(stakingState)
-		rawState[banktypes.ModuleName] = cdc.MustMarshalJSON(bankState)
+		rawState[stakingtypes.ModuleName] = cdc.GetCdc().MustMarshalJSON(stakingState)
+		rawState[banktypes.ModuleName] = cdc.GetCdc().MustMarshalJSON(bankState)
 
 		// replace appstate
 		appState, err = json.Marshal(rawState)
@@ -134,21 +134,21 @@ func AppStateFn(cdc codec.JSONCodec, simManager *module.SimulationManager) simty
 // AppStateRandomizedFn creates calls each module's GenesisState generator function
 // and creates the simulation params
 func AppStateRandomizedFn(
-	simManager *module.SimulationManager, r *rand.Rand, cdc codec.JSONCodec,
+	simManager *module.SimulationManager, r *rand.Rand, cdc codec.CodecProxy,
 	accs []simtypes.Account, genesisTimestamp time.Time, appParams simtypes.AppParams,
 ) (json.RawMessage, []simtypes.Account) {
 	numAccs := int64(len(accs))
-	genesisState := NewDefaultGenesisState(cdc)
+	genesisState := NewDefaultGenesisState(cdc.GetProtocMarshal())
 
 	// generate a random amount of initial stake coins and a random initial
 	// number of bonded accounts
 	var initialStake, numInitiallyBonded int64
 	appParams.GetOrGenerate(
-		cdc, simappparams.StakePerAccount, &initialStake, r,
+		cdc.GetCdc(), simappparams.StakePerAccount, &initialStake, r,
 		func(r *rand.Rand) { initialStake = r.Int63n(1e12) },
 	)
 	appParams.GetOrGenerate(
-		cdc, simappparams.InitiallyBondedValidators, &numInitiallyBonded, r,
+		cdc.GetCdc(), simappparams.InitiallyBondedValidators, &numInitiallyBonded, r,
 		func(r *rand.Rand) { numInitiallyBonded = int64(r.Intn(300)) },
 	)
 
@@ -167,7 +167,7 @@ func AppStateRandomizedFn(
 
 	simState := &module.SimulationState{
 		AppParams:    appParams,
-		Cdc:          cdc,
+		Cdc:          cdc.GetCdc(),
 		Rand:         r,
 		GenState:     genesisState,
 		Accounts:     accs,
@@ -188,15 +188,9 @@ func AppStateRandomizedFn(
 
 // AppStateFromGenesisFileFn util function to generate the genesis AppState
 // from a genesis.json file.
-func AppStateFromGenesisFileFn(r io.Reader, cdc codec.JSONCodec, genesisFile string) (tmtypes.GenesisDoc, []simtypes.Account) {
-	bytes, err := ioutil.ReadFile(genesisFile)
-	if err != nil {
-		panic(err)
-	}
-
-	var genesis tmtypes.GenesisDoc
+func AppStateFromGenesisFileFn(r io.Reader, cdc codec.CodecProxy, genesisFile string) (tmtypes.GenesisDoc, []simtypes.Account) {
 	// NOTE: Tendermint uses a custom JSON decoder for GenesisDoc
-	err = tmjson.Unmarshal(bytes, &genesis)
+	genesis, err := tmtypes.GenesisDocFromFile(genesisFile)
 	if err != nil {
 		panic(err)
 	}
@@ -209,7 +203,7 @@ func AppStateFromGenesisFileFn(r io.Reader, cdc codec.JSONCodec, genesisFile str
 
 	var authGenesis authtypes.GenesisState
 	if appState[authtypes.ModuleName] != nil {
-		cdc.MustUnmarshalJSON(appState[authtypes.ModuleName], &authGenesis)
+		cdc.GetCdc().MustUnmarshalJSON(appState[authtypes.ModuleName], &authGenesis)
 	}
 
 	newAccs := make([]simtypes.Account, len(authGenesis.Accounts))
@@ -229,5 +223,5 @@ func AppStateFromGenesisFileFn(r io.Reader, cdc codec.JSONCodec, genesisFile str
 		newAccs[i] = simAcc
 	}
 
-	return genesis, newAccs
+	return *genesis, newAccs
 }
