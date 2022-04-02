@@ -3,11 +3,12 @@ package ibctesting
 import (
 	"bytes"
 	"fmt"
+	okexchaintypes "github.com/okex/exchain/app/types"
 	"testing"
 	"time"
 
 	"github.com/okex/exchain/libs/cosmos-sdk/codec"
-	cryptotypes "github.com/okex/exchain/libs/cosmos-sdk/crypto/types"
+	//cryptotypes "github.com/okex/exchain/libs/cosmos-sdk/crypto/types"
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 	sdkerrors "github.com/okex/exchain/libs/cosmos-sdk/types/errors"
 	"github.com/okex/exchain/libs/cosmos-sdk/x/auth"
@@ -23,6 +24,7 @@ import (
 	tmproto "github.com/okex/exchain/libs/tendermint/abci/types"
 	"github.com/okex/exchain/libs/tendermint/crypto/secp256k1"
 	"github.com/okex/exchain/libs/tendermint/crypto/tmhash"
+	tmprototypes "github.com/okex/exchain/libs/tendermint/proto/types"
 	tmtypes "github.com/okex/exchain/libs/tendermint/types"
 	tmprotoversion "github.com/okex/exchain/libs/tendermint/version"
 	tmversion "github.com/okex/exchain/libs/tendermint/version"
@@ -59,7 +61,7 @@ type TestChain struct {
 	Vals    *tmtypes.ValidatorSet
 	Signers []tmtypes.PrivValidator
 
-	senderPrivKey cryptotypes.PrivKey
+	senderPrivKey secp256k1.PrivKeySecp256k1
 	SenderAccount authtypes.Account
 }
 
@@ -93,9 +95,9 @@ func NewTestChain(t *testing.T, coord *Coordinator, chainID string) *TestChain {
 
 	//fromBalance := suite.app.AccountKeeper.GetAccount(suite.ctx, cmFrom).GetCoins()
 	var account *apptypes.EthAccount
-	balance := sdk.NewCoins(NewPhotonCoin(sdk.OneInt()))
-	addr := sdk.AccAddress(pubkey.Address())
-	baseAcc := auth.NewBaseAccount(addr, balance, pubkey, 10, 50)
+	balance := sdk.NewCoins(okexchaintypes.NewPhotonCoin(sdk.OneInt()))
+	addr := sdk.AccAddress(pubKey.Address())
+	baseAcc := auth.NewBaseAccount(addr, balance, pubKey, 10, 50)
 	account = &apptypes.EthAccount{
 		BaseAccount: baseAcc,
 		CodeHash:    []byte{1, 2},
@@ -126,7 +128,7 @@ func NewTestChain(t *testing.T, coord *Coordinator, chainID string) *TestChain {
 		CurrentHeader: header,
 		QueryServer:   app.GetIBCKeeper(),
 		//TxConfig:      txConfig,
-		Codec:         app.AppCodec().GetProtocMarshal(),
+		Codec:         app.AppCodec(),
 		Vals:          valSet,
 		Signers:       signers,
 		senderPrivKey: senderPrivKey,
@@ -169,7 +171,7 @@ func (chain *TestChain) QueryProofAtHeight(key []byte, height int64) ([]byte, cl
 		Prove:  true,
 	})
 
-	merkleProof, err := commitmenttypes.ConvertProofs(res.ProofOps)
+	merkleProof, err := commitmenttypes.ConvertProofs(res.GetProof())
 	require.NoError(chain.t, err)
 
 	proof := chain.App.AppCodec().MustMarshal(&merkleProof)
@@ -306,7 +308,7 @@ func (chain *TestChain) GetValsAtHeight(height int64) (*tmtypes.ValidatorSet, bo
 		return nil, false
 	}
 
-	valSet := stakingtypes.Validators(histInfo.Valset)
+	valSet := stakingtypes.Validators(histInfo.ValSet)
 
 	tmValidators, err := teststaking.ToTmValidators(valSet, sdk.DefaultPowerReduction)
 	if err != nil {
@@ -392,8 +394,8 @@ func (chain *TestChain) CurrentTMClientHeader() *ibctmtypes.Header {
 // caller flexibility to use params that differ from the chain.
 func (chain *TestChain) CreateTMClientHeader(chainID string, blockHeight int64, trustedHeight clienttypes.Height, timestamp time.Time, tmValSet, tmTrustedVals *tmtypes.ValidatorSet, signers []tmtypes.PrivValidator) *ibctmtypes.Header {
 	var (
-		valSet      *tmproto.ValidatorSet
-		trustedVals *tmproto.ValidatorSet
+		valSet      *tmprototypes.ValidatorSet
+		trustedVals *tmprototypes.ValidatorSet
 	)
 	require.NotNil(chain.t, tmValSet)
 

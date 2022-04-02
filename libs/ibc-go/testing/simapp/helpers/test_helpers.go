@@ -4,7 +4,8 @@ import (
 	"math/rand"
 	"time"
 
-	cryptotypes "github.com/okex/exchain/libs/cosmos-sdk/crypto/types"
+	tmsecp256k1 "github.com/okex/exchain/libs/tendermint/crypto/secp256k1"
+	//cryptotypes "github.com/okex/exchain/libs/cosmos-sdk/crypto/types"
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 	"github.com/okex/exchain/libs/cosmos-sdk/types/simulation"
 	"github.com/okex/exchain/libs/cosmos-sdk/types/tx/signing"
@@ -18,7 +19,7 @@ const (
 )
 
 // GenTx generates a signed mock transaction.
-func GenTx( /*gen client.TxConfig,*/ msgs []sdk.Msg, feeAmt sdk.Coins, gas uint64, chainID string, accNums, accSeqs []uint64, priv ...cryptotypes.PrivKey) (sdk.Tx, error) {
+func GenTx( /*gen client.TxConfig,*/ msgs []sdk.Msg, feeAmt sdk.Coins, gas uint64, chainID string, accNums, accSeqs []uint64, priv ...tmsecp256k1.PrivKeySecp256k1) (sdk.Tx, error) {
 	sigs := make([]signing.SignatureV2, len(priv))
 
 	// create a random length memo
