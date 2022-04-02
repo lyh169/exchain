@@ -120,7 +120,7 @@ func (endpoint *Endpoint) CreateClient() (err error) {
 		return err
 	}
 
-	endpoint.ClientID, err = ParseClientIDFromEvents(res.GetEvents())
+	endpoint.ClientID, err = ParseClientIDFromEvents(res.Events)
 	require.NoError(endpoint.Chain.t, err)
 
 	return nil
@@ -170,7 +170,7 @@ func (endpoint *Endpoint) ConnOpenInit() error {
 		return err
 	}
 
-	endpoint.ConnectionID, err = ParseConnectionIDFromEvents(res.GetEvents())
+	endpoint.ConnectionID, err = ParseConnectionIDFromEvents(res.Events)
 	require.NoError(endpoint.Chain.t, err)
 
 	return nil
@@ -196,7 +196,7 @@ func (endpoint *Endpoint) ConnOpenTry() error {
 	}
 
 	if endpoint.ConnectionID == "" {
-		endpoint.ConnectionID, err = ParseConnectionIDFromEvents(res.GetEvents())
+		endpoint.ConnectionID, err = ParseConnectionIDFromEvents(res.Events)
 		require.NoError(endpoint.Chain.t, err)
 	}
 
@@ -269,14 +269,14 @@ func (endpoint *Endpoint) ChanOpenInit() error {
 		endpoint.ChannelConfig.PortID,
 		endpoint.ChannelConfig.Version, endpoint.ChannelConfig.Order, []string{endpoint.ConnectionID},
 		endpoint.Counterparty.ChannelConfig.PortID,
-		endpoint.Chain.SenderAccount.GetAddress().String(),
+		endpoint.Chain.SenderAccount.GetAddress(),
 	)
 	res, err := endpoint.Chain.SendMsgs(msg)
 	if err != nil {
 		return err
 	}
 
-	endpoint.ChannelID, err = ParseChannelIDFromEvents(res.GetEvents())
+	endpoint.ChannelID, err = ParseChannelIDFromEvents(res.Events)
 	require.NoError(endpoint.Chain.t, err)
 
 	return nil
@@ -302,7 +302,7 @@ func (endpoint *Endpoint) ChanOpenTry() error {
 	}
 
 	if endpoint.ChannelID == "" {
-		endpoint.ChannelID, err = ParseChannelIDFromEvents(res.GetEvents())
+		endpoint.ChannelID, err = ParseChannelIDFromEvents(res.Events)
 		require.NoError(endpoint.Chain.t, err)
 	}
 
