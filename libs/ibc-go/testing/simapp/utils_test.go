@@ -2,6 +2,8 @@ package simapp
 
 import (
 	"fmt"
+	"github.com/okex/exchain/libs/cosmos-sdk/codec"
+	tmkv "github.com/okex/exchain/libs/tendermint/libs/kv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,7 +11,6 @@ import (
 	"github.com/okex/exchain/libs/cosmos-sdk/codec/types"
 	cosmoscryptocodec "github.com/okex/exchain/libs/cosmos-sdk/crypto/ibc-codec"
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
-	"github.com/okex/exchain/libs/cosmos-sdk/types/kv"
 	"github.com/okex/exchain/libs/cosmos-sdk/types/module"
 	authtypes "github.com/okex/exchain/libs/cosmos-sdk/x/auth/types"
 )
@@ -27,29 +28,31 @@ func makeCodec(bm module.BasicManager) types.InterfaceRegistry {
 }
 
 func TestGetSimulationLog(t *testing.T) {
-	cdc := makeCodec(ModuleBasics)
+	//cdc := makeCodec(ModuleBasics)
+	cdc := codec.NewCodecProxy(codec.NewProtoCodec(makeCodec(ModuleBasics)), codec.New())
 
 	decoders := make(sdk.StoreDecoderRegistry)
-	decoders[authtypes.StoreKey] = func(kvAs, kvBs kv.Pair) string { return "10" }
+	decoders[authtypes.StoreKey] = func(cdc *codec.Codec, kvAs, kvBs tmkv.Pair) string { return "10" }
 
 	tests := []struct {
 		store       string
-		kvPairs     []kv.Pair
+		kvPairs     []tmkv.Pair
 		expectedLog string
 	}{
 		{
 			"Empty",
-			[]kv.Pair{{}},
+			[]tmkv.Pair{{}},
 			"",
 		},
 		{
 			authtypes.StoreKey,
-			[]kv.Pair{{Key: authtypes.GlobalAccountNumberKey, Value: cdc.MustMarshal(uint64(10))}},
+			// todo old one is MustMarshal. does it want to test pb codec?
+			[]tmkv.Pair{{Key: authtypes.GlobalAccountNumberKey, Value: cdc.GetCdc().MustMarshalBinaryBare(uint64(10))}},
 			"10",
 		},
 		{
 			"OtherStore",
-			[]kv.Pair{{Key: []byte("key"), Value: []byte("value")}},
+			[]tmkv.Pair{{Key: []byte("key"), Value: []byte("value")}},
 			fmt.Sprintf("store A %X => %X\nstore B %X => %X\n", []byte("key"), []byte("value"), []byte("key"), []byte("value")),
 		},
 	}

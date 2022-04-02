@@ -274,7 +274,7 @@ func SignAndDeliver(
 // GenSequenceOfTxs generates a set of signed transactions of messages, such
 // that they differ only by having the sequence numbers incremented between
 // every transaction.
-func GenSequenceOfTxs( /*txGen client.TxConfig,*/ msgs []sdk.Msg, accNums []uint64, initSeqNums []uint64, numToGenerate int, priv ...cryptotypes.PrivKey) ([]sdk.Tx, error) {
+func GenSequenceOfTxs( /*txGen client.TxConfig,*/ msgs []sdk.Msg, accNums []uint64, initSeqNums []uint64, numToGenerate int, priv ...tmsecp256k1.PrivKeySecp256k1) ([]sdk.Tx, error) {
 	txs := make([]sdk.Tx, numToGenerate)
 	var err error
 	for i := 0; i < numToGenerate; i++ {
