@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 
 	ibctransfertypes "github.com/okex/exchain/libs/ibc-go/modules/apps/transfer/types"
 	connectiontypes "github.com/okex/exchain/libs/ibc-go/modules/core/03-connection/types"
