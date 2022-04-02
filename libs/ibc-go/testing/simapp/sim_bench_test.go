@@ -8,7 +8,6 @@ import (
 	tmproto "github.com/okex/exchain/libs/tendermint/abci/types"
 
 	"github.com/okex/exchain/libs/cosmos-sdk/x/simulation"
-	simtypes "github.com/okex/exchain/libs/cosmos-sdk/x/simulation"
 )
 
 // Profile with:
@@ -35,12 +34,11 @@ func BenchmarkFullAppSimulation(b *testing.B) {
 		b,
 		os.Stdout,
 		app.BaseApp,
-		AppStateFn(app.AppCodec(), app.SimulationManager()),
-		simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
-		SimulationOperations(app, app.AppCodec(), config),
+		AppStateFn(*app.AppCodec(), app.SimulationManager()),
+		//		simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
+		SimulationOperations(app, *app.AppCodec().GetCdc(), config),
 		app.ModuleAccountAddrs(),
 		config,
-		app.AppCodec(),
 	)
 
 	// export state and simParams before the simulation error is checked
@@ -81,12 +79,11 @@ func BenchmarkInvariants(b *testing.B) {
 		b,
 		os.Stdout,
 		app.BaseApp,
-		AppStateFn(app.AppCodec(), app.SimulationManager()),
-		simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
-		SimulationOperations(app, app.AppCodec(), config),
+		AppStateFn(*app.AppCodec(), app.SimulationManager()),
+		//		simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
+		SimulationOperations(app, *app.AppCodec().GetCdc(), config),
 		app.ModuleAccountAddrs(),
 		config,
-		app.AppCodec(),
 	)
 
 	// export state and simParams before the simulation error is checked
