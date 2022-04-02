@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	svrcmd "github.com/okex/exchain/libs/cosmos-sdk/server/cmd"
+	svrcmd "github.com/okex/exchain/libs/cosmos-sdk/server"
 	"github.com/okex/exchain/libs/cosmos-sdk/x/genutil/client/cli"
 	"github.com/okex/exchain/libs/ibc-go/testing/simapp"
 	"github.com/okex/exchain/libs/ibc-go/testing/simapp/simd/cmd"

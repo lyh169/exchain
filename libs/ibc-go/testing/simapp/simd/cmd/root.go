@@ -2,33 +2,38 @@ package cmd
 
 import (
 	"errors"
+	"github.com/okex/exchain/libs/cosmos-sdk/codec"
+	"github.com/okex/exchain/libs/cosmos-sdk/x/genutil"
+	tcmd "github.com/okex/exchain/libs/tendermint/cmd/tendermint/commands"
+	tmtypes "github.com/okex/exchain/libs/tendermint/types"
+	"github.com/spf13/viper"
 	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/config"
-	"github.com/cosmos/cosmos-sdk/client/debug"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/keys"
-	"github.com/cosmos/cosmos-sdk/client/rpc"
-	"github.com/cosmos/cosmos-sdk/server"
-	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
-	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/snapshots"
-	"github.com/cosmos/cosmos-sdk/store"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
-	"github.com/cosmos/cosmos-sdk/x/auth/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	"github.com/cosmos/cosmos-sdk/x/crisis"
-	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
+	"github.com/okex/exchain/libs/cosmos-sdk/baseapp"
+	"github.com/okex/exchain/libs/cosmos-sdk/client"
+	"github.com/okex/exchain/libs/cosmos-sdk/client/config"
+	"github.com/okex/exchain/libs/cosmos-sdk/client/debug"
+	"github.com/okex/exchain/libs/cosmos-sdk/client/flags"
+	"github.com/okex/exchain/libs/cosmos-sdk/client/keys"
+	"github.com/okex/exchain/libs/cosmos-sdk/client/rpc"
+	"github.com/okex/exchain/libs/cosmos-sdk/server"
+	serverconfig "github.com/okex/exchain/libs/cosmos-sdk/server/config"
+	servertypes "github.com/okex/exchain/libs/cosmos-sdk/server/types"
+	"github.com/okex/exchain/libs/cosmos-sdk/store"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
+	authcmd "github.com/okex/exchain/libs/cosmos-sdk/x/auth/client/cli"
+	"github.com/okex/exchain/libs/cosmos-sdk/x/auth/types"
+	banktypes "github.com/okex/exchain/libs/cosmos-sdk/x/bank"
+	"github.com/okex/exchain/libs/cosmos-sdk/x/crisis"
+	genutilcli "github.com/okex/exchain/libs/cosmos-sdk/x/genutil/client/cli"
+	tmcli "github.com/okex/exchain/libs/tendermint/libs/cli"
+	"github.com/okex/exchain/libs/tendermint/libs/log"
+	dbm "github.com/okex/exchain/libs/tm-db"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
-	tmcli "github.com/tendermint/tendermint/libs/cli"
-	"github.com/tendermint/tendermint/libs/log"
-	dbm "github.com/tendermint/tm-db"
 
 	"github.com/okex/exchain/libs/ibc-go/testing/simapp"
 	"github.com/okex/exchain/libs/ibc-go/testing/simapp/params"
@@ -137,16 +142,51 @@ lru_size = 0`
 	return customAppTemplate, customAppConfig
 }
 
+// custom tx codec
+func makeCodec() *codec.Codec {
+	var cdc = codec.New()
+	sdk.RegisterCodec(cdc)
+	codec.RegisterCrypto(cdc)
+	return cdc
+}
 func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
-	cfg := sdk.GetConfig()
-	cfg.Seal()
+	//	cfg := sdk.GetConfig()
+	logger := log.NewNopLogger()
+	cfg, err := tcmd.ParseConfig()
+	if err != nil {
+		panic(err)
+	}
+
+	ctx := server.NewContext(cfg, logger)
+	cdc := makeCodec()
+
+	config := ctx.Config
+	config.SetRoot(viper.GetString(tmcli.HomeFlag))
+	name := viper.GetString(flags.FlagName)
+	nodeID, valPubKey, err := genutil.InitializeNodeValidatorFiles(config)
+	if err != nil {
+		panic(err)
+	}
+
+	genDoc, err := tmtypes.GenesisDocFromFile(config.GenesisFile())
+	if err != nil {
+		panic(err)
+	}
+
+	const flagGenTxDir = "gentx-dir"
+	genTxsDir := viper.GetString(flagGenTxDir)
+	if genTxsDir == "" {
+		genTxsDir = filepath.Join(config.RootDir, "config", "gentx")
+	}
+
+	initCfg := genutil.NewInitConfig(genDoc.ChainID, genTxsDir, name, nodeID, valPubKey)
 
 	rootCmd.AddCommand(
-		genutilcli.InitCmd(simapp.ModuleBasics, simapp.DefaultNodeHome),
-		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, simapp.DefaultNodeHome),
-		genutilcli.MigrateGenesisCmd(),
-		genutilcli.GenTxCmd(simapp.ModuleBasics, encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, simapp.DefaultNodeHome),
-		genutilcli.ValidateGenesisCmd(simapp.ModuleBasics),
+		genutilcli.InitCmd(ctx, cdc, simapp.ModuleBasics, simapp.DefaultNodeHome),
+		genutilcli.CollectGenTxsCmd(ctx, cdc, initCfg, simapp.DefaultNodeHome),
+		genutilcli.MigrateGenesisCmd(ctx, cdc),
+		genutilcli.GenTxCmd(ctx, cdc, simapp.ModuleBasics, encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, simapp.DefaultNodeHome),
+		genutilcli.ValidateGenesisCmd(ctx, cdc, simapp.ModuleBasics),
 		AddGenesisAccountCmd(simapp.DefaultNodeHome),
 		tmcli.NewCompletionCmd(rootCmd, true),
 		testnetCmd(simapp.ModuleBasics, banktypes.GenesisBalancesIterator{}),
