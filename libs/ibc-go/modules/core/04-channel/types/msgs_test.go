@@ -2,17 +2,23 @@ package types_test
 
 import (
 	"fmt"
+	"github.com/okex/exchain/libs/cosmos-sdk/store/iavl"
+	storetypes "github.com/okex/exchain/libs/cosmos-sdk/store/types"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
+	abci "github.com/okex/exchain/libs/tendermint/abci/types"
+	dbm "github.com/okex/exchain/libs/tm-db"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 
-	abci "github.com/tendermint/tendermint/abci/types"
-	dbm "github.com/tendermint/tm-db"
+	// 	abci "github.com/tendermint/tendermint/abci/types"
+	//	dbm "github.com/tendermint/tm-db"
 
-	"github.com/cosmos/cosmos-sdk/store/iavl"
-	"github.com/cosmos/cosmos-sdk/store/rootmulti"
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	// 	"github.com/cosmos/cosmos-sdk/store/iavl"
+	//	"github.com/cosmos/cosmos-sdk/store/rootmulti"
+	//	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	//	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/okex/exchain/libs/cosmos-sdk/store/rootmulti"
 	clienttypes "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/04-channel/types"
 	commitmenttypes "github.com/okex/exchain/libs/ibc-go/modules/core/23-commitment/types"
@@ -60,7 +66,8 @@ var (
 	invalidProofs1 = exported.Proof(nil)
 	invalidProofs2 = emptyProof
 
-	addr      = sdk.AccAddress("testaddr111111111111").String()
+	addrAcc   = sdk.AccAddress("testaddr111111111111")
+	addr      = addrAcc.String()
 	emptyAddr string
 
 	connHops             = []string{"testconnection"}
@@ -86,7 +93,7 @@ func (suite *TypesTestSuite) SetupTest() {
 	iavlStore := store.GetCommitStore(storeKey).(*iavl.Store)
 
 	iavlStore.Set([]byte("KEY"), []byte("VALUE"))
-	_ = store.Commit()
+	//	_ = store.Commit()
 
 	res := store.Query(abci.RequestQuery{
 		Path:  fmt.Sprintf("/%s/key", storeKey.Name()), // required path to get key/value+proof
@@ -94,10 +101,11 @@ func (suite *TypesTestSuite) SetupTest() {
 		Prove: true,
 	})
 
-	merkleProof, err := commitmenttypes.ConvertProofs(res.ProofOps)
+	merkleProof, err := commitmenttypes.ConvertProofs(res.GetProof())
 	suite.Require().NoError(err)
-	proof, err := app.AppCodec().Marshal(&merkleProof)
-	suite.Require().NoError(err)
+	// proof, err := app.AppCodec().Marshal(&merkleProof)
+	// suite.Require().NoError(err)
+	proof := app.AppCodec().GetCdc().MustMarshalBinaryBare(&merkleProof)
 
 	suite.proof = proof
 }
@@ -115,17 +123,17 @@ func (suite *TypesTestSuite) TestMsgChannelOpenInitValidateBasic() {
 		msg     *types.MsgChannelOpenInit
 		expPass bool
 	}{
-		{"", types.NewMsgChannelOpenInit(portid, version, types.ORDERED, connHops, cpportid, addr), true},
-		{"too short port id", types.NewMsgChannelOpenInit(invalidShortPort, version, types.ORDERED, connHops, cpportid, addr), false},
-		{"too long port id", types.NewMsgChannelOpenInit(invalidLongPort, version, types.ORDERED, connHops, cpportid, addr), false},
-		{"port id contains non-alpha", types.NewMsgChannelOpenInit(invalidPort, version, types.ORDERED, connHops, cpportid, addr), false},
-		{"invalid channel order", types.NewMsgChannelOpenInit(portid, version, types.Order(3), connHops, cpportid, addr), false},
-		{"connection hops more than 1 ", types.NewMsgChannelOpenInit(portid, version, types.ORDERED, invalidConnHops, cpportid, addr), false},
-		{"too short connection id", types.NewMsgChannelOpenInit(portid, version, types.UNORDERED, invalidShortConnHops, cpportid, addr), false},
-		{"too long connection id", types.NewMsgChannelOpenInit(portid, version, types.UNORDERED, invalidLongConnHops, cpportid, addr), false},
-		{"connection id contains non-alpha", types.NewMsgChannelOpenInit(portid, version, types.UNORDERED, []string{invalidConnection}, cpportid, addr), false},
-		{"", types.NewMsgChannelOpenInit(portid, "", types.UNORDERED, connHops, cpportid, addr), true},
-		{"invalid counterparty port id", types.NewMsgChannelOpenInit(portid, version, types.UNORDERED, connHops, invalidPort, addr), false},
+		{"", types.NewMsgChannelOpenInit(portid, version, types.ORDERED, connHops, cpportid, addrAcc), true},
+		{"too short port id", types.NewMsgChannelOpenInit(invalidShortPort, version, types.ORDERED, connHops, cpportid, addrAcc), false},
+		{"too long port id", types.NewMsgChannelOpenInit(invalidLongPort, version, types.ORDERED, connHops, cpportid, addrAcc), false},
+		{"port id contains non-alpha", types.NewMsgChannelOpenInit(invalidPort, version, types.ORDERED, connHops, cpportid, addrAcc), false},
+		{"invalid channel order", types.NewMsgChannelOpenInit(portid, version, types.Order(3), connHops, cpportid, addrAcc), false},
+		{"connection hops more than 1 ", types.NewMsgChannelOpenInit(portid, version, types.ORDERED, invalidConnHops, cpportid, addrAcc), false},
+		{"too short connection id", types.NewMsgChannelOpenInit(portid, version, types.UNORDERED, invalidShortConnHops, cpportid, addrAcc), false},
+		{"too long connection id", types.NewMsgChannelOpenInit(portid, version, types.UNORDERED, invalidLongConnHops, cpportid, addrAcc), false},
+		{"connection id contains non-alpha", types.NewMsgChannelOpenInit(portid, version, types.UNORDERED, []string{invalidConnection}, cpportid, addrAcc), false},
+		{"", types.NewMsgChannelOpenInit(portid, "", types.UNORDERED, connHops, cpportid, addrAcc), true},
+		{"invalid counterparty port id", types.NewMsgChannelOpenInit(portid, version, types.UNORDERED, connHops, invalidPort, addrAcc), false},
 		{"channel not in INIT state", &types.MsgChannelOpenInit{portid, tryOpenChannel, addr}, false},
 	}
 
