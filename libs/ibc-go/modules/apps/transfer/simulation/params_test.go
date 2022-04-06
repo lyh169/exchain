@@ -29,8 +29,10 @@ func TestParamChanges(t *testing.T) {
 
 	for i, p := range paramChanges {
 		require.Equal(t, expected[i].composedKey, p.ComposedKey())
-		require.Equal(t, expected[i].key, p.Key())
-		require.Equal(t, expected[i].simValue, p.SimValue()(r), p.Key())
-		require.Equal(t, expected[i].subspace, p.Subspace())
+		// 	require.Equal(t, expected[i].key, p.Key())
+		require.Equal(t, expected[i].key, p.Key)
+		//  require.Equal(t, expected[i].simValue, p.SimValue()(r), p.Key())
+		require.Equal(t, expected[i].simValue, p.SimValue(r), p.Key)
+		require.Equal(t, expected[i].subspace, p.Subspace)
 	}
 }
