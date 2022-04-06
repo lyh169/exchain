@@ -2,9 +2,11 @@ package ibc_test
 
 import (
 	"fmt"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/codec/types"
+	tmproto "github.com/okex/exchain/libs/tendermint/abci/types"
 	"testing"
 
-	tmproto "github.com/okex/exchain/libs/tendermint/proto/tendermint/types"
+	// tmproto "github.com/okex/exchain/libs/tendermint/proto/tendermint/types"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/okex/exchain/libs/cosmos-sdk/codec"
@@ -58,6 +60,22 @@ func TestIBCTestSuite(t *testing.T) {
 	suite.Run(t, new(IBCTestSuite))
 }
 
+func new02clientGenesisState(idcs []clienttypes.IdentifiedClientState,
+	css []clienttypes.ClientConsensusStates,
+	idgm []clienttypes.IdentifiedGenesisMetadata,
+	param clienttypes.Params,
+	createLocalhost bool,
+	nextClientSeq uint64) clienttypes.GenesisState {
+	return clienttypes.GenesisState{
+		Clients:            idcs,
+		ClientsConsensus:   css,
+		ClientsMetadata:    idgm,
+		Params:             param,
+		CreateLocalhost:    createLocalhost,
+		NextClientSequence: nextClientSeq,
+	}
+}
+
 func (suite *IBCTestSuite) TestValidateGenesis() {
 	header := suite.chainA.CreateTMClientHeader(suite.chainA.ChainID, suite.chainA.CurrentHeader.Height, clienttypes.NewHeight(0, uint64(suite.chainA.CurrentHeader.Height-1)), suite.chainA.CurrentHeader.Time, suite.chainA.Vals, suite.chainA.Vals, suite.chainA.Signers)
 
@@ -74,7 +92,8 @@ func (suite *IBCTestSuite) TestValidateGenesis() {
 		{
 			name: "valid genesis",
 			genState: &types.GenesisState{
-				ClientGenesis: clienttypes.NewGenesisState(
+				// ClientGenesis: clienttypes.NewGenesisState(
+				ClientGenesis: new02clientGenesisState(
 					[]clienttypes.IdentifiedClientState{
 						clienttypes.NewIdentifiedClientState(
 							clientID, ibctmtypes.NewClientState(suite.chainA.ChainID, ibctmtypes.DefaultTrustLevel, ibctesting.TrustingPeriod, ibctesting.UnbondingPeriod, ibctesting.MaxClockDrift, clientHeight, commitmenttypes.GetSDKSpecs(), ibctesting.UpgradePath, false, false),
@@ -154,7 +173,8 @@ func (suite *IBCTestSuite) TestValidateGenesis() {
 		{
 			name: "invalid client genesis",
 			genState: &types.GenesisState{
-				ClientGenesis: clienttypes.NewGenesisState(
+				// ClientGenesis: clienttypes.NewGenesisState(
+				ClientGenesis: new02clientGenesisState(
 					[]clienttypes.IdentifiedClientState{
 						clienttypes.NewIdentifiedClientState(
 							clientID, ibctmtypes.NewClientState(suite.chainA.ChainID, ibctmtypes.DefaultTrustLevel, ibctesting.TrustingPeriod, ibctesting.UnbondingPeriod, ibctesting.MaxClockDrift, clientHeight, commitmenttypes.GetSDKSpecs(), ibctesting.UpgradePath, false, false),
@@ -238,7 +258,8 @@ func (suite *IBCTestSuite) TestInitGenesis() {
 		{
 			name: "valid genesis",
 			genState: &types.GenesisState{
-				ClientGenesis: clienttypes.NewGenesisState(
+				// ClientGenesis: clienttypes.NewGenesisState(
+				ClientGenesis: new02clientGenesisState(
 					[]clienttypes.IdentifiedClientState{
 						clienttypes.NewIdentifiedClientState(
 							clientID, ibctmtypes.NewClientState(suite.chainA.ChainID, ibctmtypes.DefaultTrustLevel, ibctesting.TrustingPeriod, ibctesting.UnbondingPeriod, ibctesting.MaxClockDrift, clientHeight, commitmenttypes.GetSDKSpecs(), ibctesting.UpgradePath, false, false),
@@ -359,7 +380,8 @@ func (suite *IBCTestSuite) TestExportGenesis() {
 			})
 
 			suite.NotPanics(func() {
-				cdc := codec.NewProtoCodec(suite.chainA.GetSimApp().InterfaceRegistry())
+				// cdc := codec.NewProtoCodec(suite.chainA.GetSimApp().InterfaceRegistry())
+				cdc := codec.NewProtoCodec(sdk.NewInterfaceRegistry())
 				genState := cdc.MustMarshalJSON(gs)
 				cdc.MustUnmarshalJSON(genState, gs)
 			})
