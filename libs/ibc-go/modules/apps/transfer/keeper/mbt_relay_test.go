@@ -7,14 +7,17 @@ package keeper_test
 import (
 	"encoding/json"
 	"fmt"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
+	sdkerrors "github.com/okex/exchain/libs/cosmos-sdk/types/errors"
+	"github.com/okex/exchain/libs/tendermint/crypto"
 	"io/ioutil"
 	"strconv"
 	"strings"
 
-	"github.com/tendermint/tendermint/crypto"
+	// "github.com/tendermint/tendermint/crypto"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	// sdk "github.com/cosmos/cosmos-sdk/types"
+	// sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/okex/exchain/libs/ibc-go/modules/apps/transfer/types"
 	clienttypes "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	channeltypes "github.com/okex/exchain/libs/ibc-go/modules/core/04-channel/types"
@@ -250,14 +253,15 @@ func (bank *Bank) NonZeroString() string {
 // Construct a bank out of the chain bank
 func BankOfChain(chain *ibctesting.TestChain) Bank {
 	bank := MakeBank()
-	chain.GetSimApp().BankKeeper.IterateAllBalances(chain.GetContext(), func(address sdk.AccAddress, coin sdk.Coin) (stop bool) {
-		fullDenom := coin.Denom
-		if strings.HasPrefix(coin.Denom, "ibc/") {
-			fullDenom, _ = chain.GetSimApp().TransferKeeper.DenomPathFromHash(chain.GetContext(), coin.Denom)
-		}
-		bank.SetBalance(address.String(), fullDenom, coin.Amount)
-		return false
-	})
+	// todo how to Iterate all balance
+	//	chain.GetSimApp().BankKeeper.IterateAllBalances(chain.GetContext(), func(address sdk.AccAddress, coin sdk.Coin) (stop bool) {
+	//		fullDenom := coin.Denom
+	//		if strings.HasPrefix(coin.Denom, "ibc/") {
+	//			fullDenom, _ = chain.GetSimApp().TransferKeeper.DenomPathFromHash(chain.GetContext(), coin.Denom)
+	//		}
+	//		bank.SetBalance(address.String(), fullDenom, coin.Amount)
+	//		return false
+	//	})
 	return bank
 }
 
@@ -341,7 +345,8 @@ func (suite *KeeperTestSuite) TestModelBasedRelay() {
 							suite.chainB.GetContext(),
 							tc.packet.SourcePort,
 							tc.packet.SourceChannel,
-							sdk.NewCoin(denom, amount),
+							sdk.NewCoinAdapter(denom, amount),
+							// sdk.NewCoin(denom, amount),
 							sender,
 							tc.packet.Data.Receiver,
 							clienttypes.NewHeight(0, 110),
