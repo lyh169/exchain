@@ -1,12 +1,14 @@
 package types_test
 
 import (
+	"github.com/okex/exchain/libs/cosmos-sdk/codec"
+	codectypes "github.com/okex/exchain/libs/cosmos-sdk/codec/types"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	// "github.com/cosmos/cosmos-sdk/codec"
+	// codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	clienttypes "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/04-channel/types"
 )
@@ -18,9 +20,10 @@ func TestCommitPacket(t *testing.T) {
 	clienttypes.RegisterInterfaces(registry)
 	types.RegisterInterfaces(registry)
 
-	cdc := codec.NewProtoCodec(registry)
-
-	commitment := types.CommitPacket(cdc, &packet)
+	cdcProto := codec.NewProtoCodec(registry)
+	cdc := codec.New()
+	cdcProxy := codec.NewCodecProxy(cdcProto, cdc)
+	commitment := types.CommitPacket(cdcProxy, &packet)
 	require.NotNil(t, commitment)
 }
 
