@@ -7,10 +7,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/types/module"
-	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+	//	"github.com/cosmos/cosmos-sdk/codec"
+	//	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	//	"github.com/cosmos/cosmos-sdk/types/module"
+	//	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+	"github.com/okex/exchain/libs/cosmos-sdk/codec"
+	codectypes "github.com/okex/exchain/libs/cosmos-sdk/codec/types"
+	"github.com/okex/exchain/libs/cosmos-sdk/types/module"
+	simtypes "github.com/okex/exchain/libs/cosmos-sdk/x/simulation"
 	"github.com/okex/exchain/libs/ibc-go/modules/apps/transfer/simulation"
 	"github.com/okex/exchain/libs/ibc-go/modules/apps/transfer/types"
 )
@@ -18,8 +22,9 @@ import (
 // TestRandomizedGenState tests the normal scenario of applying RandomizedGenState.
 // Abonormal scenarios are not tested here.
 func TestRandomizedGenState(t *testing.T) {
-	interfaceRegistry := codectypes.NewInterfaceRegistry()
-	cdc := codec.NewProtoCodec(interfaceRegistry)
+	//interfaceRegistry := codectypes.NewInterfaceRegistry()
+	// cdc := codec.NewProtoCodec(interfaceRegistry)
+	cdc := codec.New()
 
 	s := rand.NewSource(1)
 	r := rand.New(s)
