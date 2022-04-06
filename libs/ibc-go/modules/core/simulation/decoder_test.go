@@ -2,18 +2,20 @@ package simulation_test
 
 import (
 	"fmt"
+	tmkv "github.com/okex/exchain/libs/tendermint/libs/kv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cosmos/cosmos-sdk/types/kv"
-	"github.com/okex/exchain/libs/ibc-go//testing/simapp"
+	//"github.com/cosmos/cosmos-sdk/types/kv"
+	"github.com/okex/exchain/libs/cosmos-sdk/types/kv"
 	clienttypes "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	connectiontypes "github.com/okex/exchain/libs/ibc-go/modules/core/03-connection/types"
 	channeltypes "github.com/okex/exchain/libs/ibc-go/modules/core/04-channel/types"
 	host "github.com/okex/exchain/libs/ibc-go/modules/core/24-host"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/simulation"
 	ibctmtypes "github.com/okex/exchain/libs/ibc-go/modules/light-clients/07-tendermint/types"
+	"github.com/okex/exchain/libs/ibc-go/testing/simapp"
 )
 
 func TestDecodeStore(t *testing.T) {
@@ -71,9 +73,19 @@ func TestDecodeStore(t *testing.T) {
 		i, tt := i, tt
 		t.Run(tt.name, func(t *testing.T) {
 			if i == len(tests)-1 {
-				require.Panics(t, func() { dec(kvPairs.Pairs[i], kvPairs.Pairs[i]) }, tt.name)
+				//	require.Panics(t, func() { dec(nil, kvPairs.Pairs[i], kvPairs.Pairs[i]) }, tt.name)
+				kvA := tmkv.Pair{
+					Key:   kvPairs.Pairs[i].GetKey(),
+					Value: kvPairs.Pairs[i].GetValue(),
+				}
+				require.Panics(t, func() { dec(nil, kvA, kvA) }, tt.name)
 			} else {
-				require.Equal(t, tt.expectedLog, dec(kvPairs.Pairs[i], kvPairs.Pairs[i]), tt.name)
+				// require.Equal(t, tt.expectedLog, dec(nil, kvPairs.Pairs[i], kvPairs.Pairs[i]), tt.name)
+				kvA := tmkv.Pair{
+					Key:   kvPairs.Pairs[i].GetKey(),
+					Value: kvPairs.Pairs[i].GetValue(),
+				}
+				require.Equal(t, tt.expectedLog, dec(nil, kvA, kvA), tt.name)
 			}
 		})
 	}
