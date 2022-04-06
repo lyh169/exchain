@@ -2,24 +2,26 @@ package types_test
 
 import (
 	"fmt"
-
+	abci "github.com/okex/exchain/libs/tendermint/abci/types"
 	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
-	crypto "github.com/tendermint/tendermint/proto/tendermint/crypto"
+	// abci "github.com/tendermint/tendermint/abci/types"
+	// crypto "github.com/tendermint/tendermint/proto/tendermint/crypto"
+	"github.com/okex/exchain/libs/tendermint/crypto/merkle"
 
 	"github.com/okex/exchain/libs/ibc-go/modules/core/23-commitment/types"
 )
 
 func (suite *MerkleTestSuite) TestConvertProofs() {
 	suite.iavlStore.Set([]byte("MYKEY"), []byte("MYVALUE"))
-	cid := suite.store.Commit()
+	// cid := suite.store.Commit()
+	cid := suite.store.LastCommitID()
 
 	root := types.NewMerkleRoot(cid.Hash)
 	existsPath := types.NewMerklePath(suite.storeKey.Name(), "MYKEY")
 	nonexistPath := types.NewMerklePath(suite.storeKey.Name(), "NOTMYKEY")
 	value := []byte("MYVALUE")
 
-	var proofOps *crypto.ProofOps
+	var proofOps *merkle.Proof
 	testcases := []struct {
 		name      string
 		malleate  func()
@@ -34,9 +36,9 @@ func (suite *MerkleTestSuite) TestConvertProofs() {
 					Data:  []byte("MYKEY"),
 					Prove: true,
 				})
-				require.NotNil(suite.T(), res.ProofOps)
+				require.NotNil(suite.T(), res.GetProof())
 
-				proofOps = res.ProofOps
+				proofOps = res.GetProof()
 			},
 			true, true,
 		},
@@ -48,9 +50,9 @@ func (suite *MerkleTestSuite) TestConvertProofs() {
 					Data:  []byte("NOTMYKEY"),
 					Prove: true,
 				})
-				require.NotNil(suite.T(), res.ProofOps)
+				require.NotNil(suite.T(), res.GetProof())
 
-				proofOps = res.ProofOps
+				proofOps = res.GetProof()
 			},
 			false, true,
 		},
@@ -69,9 +71,9 @@ func (suite *MerkleTestSuite) TestConvertProofs() {
 					Data:  []byte("MYKEY"),
 					Prove: true,
 				})
-				require.NotNil(suite.T(), res.ProofOps)
+				require.NotNil(suite.T(), res.GetProof())
 
-				proofOps = res.ProofOps
+				proofOps = res.GetProof()
 				proofOps.Ops[0].Data = nil
 			},
 			true, false,
