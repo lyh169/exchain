@@ -2,10 +2,11 @@ package keeper_test
 
 import (
 	"fmt"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 
 	"github.com/okex/exchain/libs/ibc-go/testing/simapp"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	// sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/okex/exchain/libs/ibc-go/modules/apps/transfer/types"
 	clienttypes "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	channeltypes "github.com/okex/exchain/libs/ibc-go/modules/core/04-channel/types"
@@ -37,7 +38,7 @@ func (suite *KeeperTestSuite) TestSendTransfer() {
 			func() {
 				// send coin from chainA back to chainB
 				suite.coordinator.CreateTransferChannels(path)
-				amount = types.GetTransferCoin(path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, sdk.DefaultBondDenom, sdk.NewInt(100))
+				amount = types.GetTransferCoin(path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, sdk.DefaultBondDenom, 100)
 			}, false, true},
 		{"source channel not found",
 			func() {
@@ -71,7 +72,7 @@ func (suite *KeeperTestSuite) TestSendTransfer() {
 		{"send from module account failed",
 			func() {
 				suite.coordinator.CreateTransferChannels(path)
-				amount = types.GetTransferCoin(path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, " randomdenom", sdk.NewInt(100))
+				amount = types.GetTransferCoin(path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, " randomdenom", 100)
 			}, false, false},
 		{"channel capability not found",
 			func() {
@@ -97,7 +98,7 @@ func (suite *KeeperTestSuite) TestSendTransfer() {
 			if !tc.sendFromSource {
 				// send coin from chainB to chainA
 				coinFromBToA := sdk.NewCoin(sdk.DefaultBondDenom, sdk.NewInt(100))
-				transferMsg := types.NewMsgTransfer(path.EndpointB.ChannelConfig.PortID, path.EndpointB.ChannelID, coinFromBToA, suite.chainB.SenderAccount.GetAddress().String(), suite.chainA.SenderAccount.GetAddress().String(), clienttypes.NewHeight(0, 110), 0)
+				transferMsg := types.NewMsgTransfer(path.EndpointB.ChannelConfig.PortID, path.EndpointB.ChannelID, coinFromBToA, suite.chainB.SenderAccount.GetAddress(), suite.chainA.SenderAccount.GetAddress().String(), clienttypes.NewHeight(0, 110), 0)
 				_, err = suite.chainB.SendMsgs(transferMsg)
 				suite.Require().NoError(err) // message committed
 
@@ -117,7 +118,7 @@ func (suite *KeeperTestSuite) TestSendTransfer() {
 			}
 
 			err = suite.chainA.GetSimApp().TransferKeeper.SendTransfer(
-				suite.chainA.GetContext(), path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, amount,
+				suite.chainA.GetContext(), path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, sdk.NewCoinAdapter(amount.Denom, sdk.NewIntFromBigInt(amount.Amount.BigInt())),
 				suite.chainA.SenderAccount.GetAddress(), suite.chainB.SenderAccount.GetAddress().String(), clienttypes.NewHeight(0, 110), 0,
 			)
 
@@ -185,7 +186,7 @@ func (suite *KeeperTestSuite) TestOnRecvPacket() {
 			if tc.recvIsSource {
 				// send coin from chainB to chainA, receive them, acknowledge them, and send back to chainB
 				coinFromBToA := sdk.NewCoin(sdk.DefaultBondDenom, sdk.NewInt(100))
-				transferMsg := types.NewMsgTransfer(path.EndpointB.ChannelConfig.PortID, path.EndpointB.ChannelID, coinFromBToA, suite.chainB.SenderAccount.GetAddress().String(), suite.chainA.SenderAccount.GetAddress().String(), clienttypes.NewHeight(0, 110), 0)
+				transferMsg := types.NewMsgTransfer(path.EndpointB.ChannelConfig.PortID, path.EndpointB.ChannelID, coinFromBToA, suite.chainB.SenderAccount.GetAddress(), suite.chainA.SenderAccount.GetAddress().String(), clienttypes.NewHeight(0, 110), 0)
 				_, err := suite.chainB.SendMsgs(transferMsg)
 				suite.Require().NoError(err) // message committed
 
@@ -205,7 +206,7 @@ func (suite *KeeperTestSuite) TestOnRecvPacket() {
 			}
 
 			// send coin from chainA to chainB
-			transferMsg := types.NewMsgTransfer(path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, sdk.NewCoin(trace.IBCDenom(), amount), suite.chainA.SenderAccount.GetAddress().String(), receiver, clienttypes.NewHeight(0, 110), 0)
+			transferMsg := types.NewMsgTransfer(path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, sdk.NewCoin(trace.IBCDenom(), amount), suite.chainA.SenderAccount.GetAddress(), receiver, clienttypes.NewHeight(0, 110), 0)
 			_, err := suite.chainA.SendMsgs(transferMsg)
 			suite.Require().NoError(err) // message committed
 
@@ -283,16 +284,20 @@ func (suite *KeeperTestSuite) TestOnAcknowledgementPacket() {
 			data := types.NewFungibleTokenPacketData(trace.GetFullDenomPath(), amount.String(), suite.chainA.SenderAccount.GetAddress().String(), suite.chainB.SenderAccount.GetAddress().String())
 			packet := channeltypes.NewPacket(data.GetBytes(), 1, path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, path.EndpointB.ChannelConfig.PortID, path.EndpointB.ChannelID, clienttypes.NewHeight(0, 100), 0)
 
-			preCoin := suite.chainA.GetSimApp().BankKeeper.GetBalance(suite.chainA.GetContext(), suite.chainA.SenderAccount.GetAddress(), trace.IBCDenom())
+			// preCoin := suite.chainA.GetSimApp().BankKeeper.GetBalance(suite.chainA.GetContext(), suite.chainA.SenderAccount.GetAddress(), trace.IBCDenom())
+			preCoin := suite.chainA.GetSimApp().BankKeeper.GetCoins(suite.chainA.GetContext(), suite.chainA.SenderAccount.GetAddress())
 
 			err := suite.chainA.GetSimApp().TransferKeeper.OnAcknowledgementPacket(suite.chainA.GetContext(), packet, data, tc.ack)
 			if tc.expPass {
 				suite.Require().NoError(err)
-				postCoin := suite.chainA.GetSimApp().BankKeeper.GetBalance(suite.chainA.GetContext(), suite.chainA.SenderAccount.GetAddress(), trace.IBCDenom())
-				deltaAmount := postCoin.Amount.Sub(preCoin.Amount)
+				// postCoin := suite.chainA.GetSimApp().BankKeeper.GetBalance(suite.chainA.GetContext(), suite.chainA.SenderAccount.GetAddress(), trace.IBCDenom())
+				postCoin := suite.chainA.GetSimApp().BankKeeper.GetCoins(suite.chainA.GetContext(), suite.chainA.SenderAccount.GetAddress())
+				// deltaAmount := postCoin.Amount.Sub(preCoin.Amount)
+				deltaAmount := postCoin.Sub(preCoin)
 
 				if tc.success {
-					suite.Require().Equal(int64(0), deltaAmount.Int64(), "successful ack changed balance")
+					// suite.Require().Equal(int64(0), deltaAmount.Int64(), "successful ack changed balance")
+					suite.Require().Equal(int64(0), deltaAmount.AmountOf(trace.IBCDenom()).Int64(), "successful ack changed balance")
 				} else {
 					suite.Require().Equal(amount, deltaAmount, "failed ack did not trigger refund")
 				}
@@ -369,16 +374,20 @@ func (suite *KeeperTestSuite) TestOnTimeoutPacket() {
 			data := types.NewFungibleTokenPacketData(trace.GetFullDenomPath(), amount.String(), sender, suite.chainB.SenderAccount.GetAddress().String())
 			packet := channeltypes.NewPacket(data.GetBytes(), 1, path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, path.EndpointB.ChannelConfig.PortID, path.EndpointB.ChannelID, clienttypes.NewHeight(0, 100), 0)
 
-			preCoin := suite.chainA.GetSimApp().BankKeeper.GetBalance(suite.chainA.GetContext(), suite.chainA.SenderAccount.GetAddress(), trace.IBCDenom())
+			// preCoin := suite.chainA.GetSimApp().BankKeeper.GetBalance(suite.chainA.GetContext(), suite.chainA.SenderAccount.GetAddress(), trace.IBCDenom())
+			preCoin := suite.chainA.GetSimApp().BankKeeper.GetCoins(suite.chainA.GetContext(), suite.chainA.SenderAccount.GetAddress())
 
 			err := suite.chainA.GetSimApp().TransferKeeper.OnTimeoutPacket(suite.chainA.GetContext(), packet, data)
 
-			postCoin := suite.chainA.GetSimApp().BankKeeper.GetBalance(suite.chainA.GetContext(), suite.chainA.SenderAccount.GetAddress(), trace.IBCDenom())
-			deltaAmount := postCoin.Amount.Sub(preCoin.Amount)
+			// postCoin := suite.chainA.GetSimApp().BankKeeper.GetBalance(suite.chainA.GetContext(), suite.chainA.SenderAccount.GetAddress(), trace.IBCDenom())
+			postCoin := suite.chainA.GetSimApp().BankKeeper.GetCoins(suite.chainA.GetContext(), suite.chainA.SenderAccount.GetAddress())
+			// deltaAmount := postCoin.Amount.Sub(preCoin.Amount)
+			deltaAmount := postCoin.Sub(preCoin)
 
 			if tc.expPass {
 				suite.Require().NoError(err)
-				suite.Require().Equal(amount.Int64(), deltaAmount.Int64(), "successful timeout did not trigger refund")
+				// suite.Require().Equal(amount.Int64(), deltaAmount.Int64(), "successful timeout did not trigger refund")
+				suite.Require().Equal(amount.Int64(), deltaAmount.AmountOf(trace.IBCDenom()).Int64(), "successful timeout did not trigger refund")
 			} else {
 				suite.Require().Error(err)
 			}
