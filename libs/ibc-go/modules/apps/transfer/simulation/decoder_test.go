@@ -6,10 +6,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cosmos/cosmos-sdk/types/kv"
+	"github.com/okex/exchain/libs/cosmos-sdk/types/kv"
 	"github.com/okex/exchain/libs/ibc-go/modules/apps/transfer/simulation"
 	"github.com/okex/exchain/libs/ibc-go/modules/apps/transfer/types"
 	"github.com/okex/exchain/libs/ibc-go/testing/simapp"
+	tmkv "github.com/okex/exchain/libs/tendermint/libs/kv"
 )
 
 func TestDecodeStore(t *testing.T) {
@@ -50,10 +51,22 @@ func TestDecodeStore(t *testing.T) {
 		i, tt := i, tt
 		t.Run(tt.name, func(t *testing.T) {
 			if i == len(tests)-1 {
-				require.Panics(t, func() { dec(kvPairs.Pairs[i], kvPairs.Pairs[i]) }, tt.name)
+				//require.Panics(t, func() { dec(nil, kvPairs.Pairs[i], kvPairs.Pairs[i]) }, tt.name)
+				kvA := tmkv.Pair{
+					Key:   kvPairs.Pairs[i].GetKey(),
+					Value: kvPairs.Pairs[i].GetValue(),
+				}
+				require.Panics(t, func() { dec(nil, kvA, kvA) }, tt.name)
 			} else {
-				require.Equal(t, tt.expectedLog, dec(kvPairs.Pairs[i], kvPairs.Pairs[i]), tt.name)
+				kvA := tmkv.Pair{
+					Key:   kvPairs.Pairs[i].GetKey(),
+					Value: kvPairs.Pairs[i].GetValue(),
+				}
+				//require.Equal(t, tt.expectedLog, dec(nil, kvPairs.Pairs[i], kvPairs.Pairs[i]), tt.name)
+				require.Equal(t, tt.expectedLog, dec(nil, kvA, kvA), tt.name)
 			}
 		})
 	}
 }
+
+func
