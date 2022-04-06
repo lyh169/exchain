@@ -1,13 +1,15 @@
 package client_test
 
 import (
+	upgradetypes "github.com/okex/exchain/libs/cosmos-sdk/x/upgrade"
+	abci "github.com/okex/exchain/libs/tendermint/abci/types"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	abci "github.com/tendermint/tendermint/abci/types"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
+	// abci "github.com/tendermint/tendermint/abci/types"
+	// tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	// upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	client "github.com/okex/exchain/libs/ibc-go/modules/core/02-client"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/exported"
@@ -32,9 +34,10 @@ func (suite *ClientTestSuite) SetupTest() {
 	suite.chainB = suite.coordinator.GetChain(ibctesting.GetChainID(1))
 
 	// set localhost client
-	revision := types.ParseChainID(suite.chainA.GetContext().ChainID())
+	tmpCtx := suite.chainA.GetContext()
+	revision := types.ParseChainID(tmpCtx.ChainID())
 	localHostClient := localhosttypes.NewClientState(
-		suite.chainA.GetContext().ChainID(), types.NewHeight(revision, uint64(suite.chainA.GetContext().BlockHeight())),
+		tmpCtx.ChainID(), types.NewHeight(revision, uint64(tmpCtx.BlockHeight())),
 	)
 	suite.chainA.App.GetIBCKeeper().ClientKeeper.SetClientState(suite.chainA.GetContext(), exported.Localhost, localHostClient)
 }
@@ -64,18 +67,20 @@ func (suite *ClientTestSuite) TestBeginBlocker() {
 }
 
 func (suite *ClientTestSuite) TestBeginBlockerConsensusState() {
+	tmpCtx := suite.chainA.GetContext()
 	plan := &upgradetypes.Plan{
 		Name:   "test",
-		Height: suite.chainA.GetContext().BlockHeight() + 1,
+		Height: tmpCtx.BlockHeight() + 1,
 	}
 	// set upgrade plan in the upgrade store
-	store := suite.chainA.GetContext().KVStore(suite.chainA.GetSimApp().GetKey(upgradetypes.StoreKey))
-	bz := suite.chainA.App.AppCodec().MustMarshal(plan)
+	store := tmpCtx.KVStore(suite.chainA.GetSimApp().GetKey(upgradetypes.StoreKey))
+	// bz := suite.chainA.App.AppCodec().MustMarshal(plan)
+	bz := suite.chainA.App.AppCodec().GetCdc().MustMarshalBinaryBare(plan)
 	store.Set(upgradetypes.PlanKey(), bz)
 
 	nextValsHash := []byte("nextValsHash")
-	newCtx := suite.chainA.GetContext().WithBlockHeader(tmproto.Header{
-		Height:             suite.chainA.GetContext().BlockHeight(),
+	newCtx := suite.chainA.GetContext().WithBlockHeader(abci.Header{
+		Height:             tmpCtx.BlockHeight(),
 		NextValidatorsHash: nextValsHash,
 	})
 
