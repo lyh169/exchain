@@ -17,13 +17,15 @@ func (suite *TypesTestSuite) TestMarshalHeader() {
 	suite.Require().NoError(err)
 
 	// unmarshal header
-	newHeader, err := types.UnmarshalHeader(cdc, bz)
+	// newHeader, err := types.UnmarshalHeader(cdc, bz)
+	newHeader, err := types.UnmarshalHeader(cdc.GetProtocMarshal(), bz)
 	suite.Require().NoError(err)
 
 	suite.Require().Equal(h, newHeader)
 
 	// use invalid bytes
-	invalidHeader, err := types.UnmarshalHeader(cdc, []byte("invalid bytes"))
+	// invalidHeader, err := types.UnmarshalHeader(cdc, []byte("invalid bytes"))
+	invalidHeader, err := types.UnmarshalHeader(cdc.GetProtocMarshal(), []byte("invalid bytes"))
 	suite.Require().Error(err)
 	suite.Require().Nil(invalidHeader)
 
