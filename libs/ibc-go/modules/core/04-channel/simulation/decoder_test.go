@@ -2,6 +2,7 @@ package simulation_test
 
 import (
 	"fmt"
+	tmkv "github.com/okex/exchain/libs/tendermint/libs/kv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -76,7 +77,12 @@ func TestDecodeStore(t *testing.T) {
 	for i, tt := range tests {
 		i, tt := i, tt
 		t.Run(tt.name, func(t *testing.T) {
-			res, found := simulation.NewDecodeStore(cdc, kvPairs.Pairs[i], kvPairs.Pairs[i])
+			// res, found := simulation.NewDecodeStore(cdc, kvPairs.Pairs[i], kvPairs.Pairs[i])
+			kvA := tmkv.Pair{
+				Key:   kvPairs.Pairs[i].GetKey(),
+				Value: kvPairs.Pairs[i].GetValue(),
+			}
+			res, found := simulation.NewDecodeStore(cdc, kvA, kvA)
 			if i == len(tests)-1 {
 				require.False(t, found, string(kvPairs.Pairs[i].Key))
 				require.Empty(t, res, string(kvPairs.Pairs[i].Key))

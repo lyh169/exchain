@@ -1,19 +1,20 @@
 package keeper_test
 
 import (
+	"github.com/okex/exchain/libs/cosmos-sdk/baseapp"
+	"github.com/okex/exchain/libs/cosmos-sdk/codec"
+	tmproto "github.com/okex/exchain/libs/tendermint/abci/types"
+	stakingtypes "github.com/okex/exchain/x/staking/types"
 	"math/rand"
 	"testing"
 	"time"
 
 	tmbytes "github.com/okex/exchain/libs/tendermint/libs/bytes"
-	tmproto "github.com/okex/exchain/libs/tendermint/proto/tendermint/types"
+	// tmproto "github.com/okex/exchain/libs/tendermint/proto/tendermint/types"
 	tmtypes "github.com/okex/exchain/libs/tendermint/types"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/codec"
-	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	// stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/02-client/keeper"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
@@ -95,7 +96,8 @@ func (suite *KeeperTestSuite) SetupTest() {
 
 	validator := tmtypes.NewValidator(pubKey, 1)
 	suite.valSet = tmtypes.NewValidatorSet([]*tmtypes.Validator{validator})
-	suite.valSetHash = suite.valSet.Hash()
+	// suite.valSetHash = suite.valSet.Hash()
+	suite.valSetHash = suite.valSet.Hash(int64(testClientHeightMinus1.GetRevisionHeight()))
 	suite.header = suite.chainA.CreateTMClientHeader(testChainID, int64(testClientHeight.RevisionHeight), testClientHeightMinus1, now2, suite.valSet, suite.valSet, []tmtypes.PrivValidator{suite.privVal})
 	suite.consensusState = ibctmtypes.NewConsensusState(suite.now, commitmenttypes.NewMerkleRoot([]byte("hash")), suite.valSetHash)
 
@@ -104,23 +106,29 @@ func (suite *KeeperTestSuite) SetupTest() {
 		privVal := ibctestingmock.NewPV()
 		tmPk, err := privVal.GetPubKey()
 		suite.Require().NoError(err)
-		pk, err := cryptocodec.FromTmPubKeyInterface(tmPk)
-		suite.Require().NoError(err)
-		val, err := stakingtypes.NewValidator(sdk.ValAddress(pk.Address()), pk, stakingtypes.Description{})
-		suite.Require().NoError(err)
+		// pk, err := cryptocodec.FromTmPubKeyInterface(tmPk)
+		// suite.Require().NoError(err)
+		valAddr := sdk.ValAddress(tmPk.Address().Bytes())
+		// val, err := stakingtypes.NewValidator(sdk.ValAddress(pk), pk, stakingtypes.Description{})
+		// suite.Require().NoError(err)
+		val := stakingtypes.NewValidator(valAddr, tmPk, stakingtypes.Description{}, stakingtypes.DefaultMinSelfDelegation)
 
-		val.Status = stakingtypes.Bonded
+		// val.Status = stakingtypes.Bonded
+		val.Status = sdk.Bonded
 		val.Tokens = sdk.NewInt(rand.Int63())
 		validators = append(validators, val)
 
-		hi := stakingtypes.NewHistoricalInfo(suite.ctx.BlockHeader(), validators, sdk.DefaultPowerReduction)
-		app.StakingKeeper.SetHistoricalInfo(suite.ctx, int64(i), &hi)
+		// hi := stakingtypes.NewHistoricalInfo(suite.ctx.BlockHeader(), validators, sdk.DefaultPowerReduction)
+		hi := stakingtypes.NewHistoricalInfo(suite.ctx.BlockHeader(), validators)
+		app.StakingKeeper.SetHistoricalInfo(suite.ctx, int64(i), hi)
 	}
 
 	// add localhost client
 	revision := types.ParseChainID(suite.chainA.ChainID)
+	tmpCtx := suite.chainA.GetContext()
 	localHostClient := localhosttypes.NewClientState(
-		suite.chainA.ChainID, types.NewHeight(revision, uint64(suite.chainA.GetContext().BlockHeight())),
+		// suite.chainA.ChainID, types.NewHeight(revision, uint64(suite.chainA.GetContext().BlockHeight())),
+		suite.chainA.ChainID, types.NewHeight(revision, uint64(tmpCtx.BlockHeight())),
 	)
 	suite.chainA.App.GetIBCKeeper().ClientKeeper.SetClientState(suite.chainA.GetContext(), exported.Localhost, localHostClient)
 
@@ -155,7 +163,8 @@ func (suite *KeeperTestSuite) TestSetClientConsensusState() {
 }
 
 func (suite *KeeperTestSuite) TestValidateSelfClient() {
-	testClientHeight := types.NewHeight(0, uint64(suite.chainA.GetContext().BlockHeight()-1))
+	tmpCtx := suite.chainA.GetContext()
+	testClientHeight := types.NewHeight(0, uint64(tmpCtx.BlockHeight()-1))
 
 	testCases := []struct {
 		name        string
@@ -189,7 +198,8 @@ func (suite *KeeperTestSuite) TestValidateSelfClient() {
 		},
 		{
 			"invalid client height",
-			ibctmtypes.NewClientState(suite.chainA.ChainID, ibctmtypes.DefaultTrustLevel, trustingPeriod, ubdPeriod, maxClockDrift, types.NewHeight(0, uint64(suite.chainA.GetContext().BlockHeight())), commitmenttypes.GetSDKSpecs(), ibctesting.UpgradePath, false, false),
+			//ibctmtypes.NewClientState(suite.chainA.ChainID, ibctmtypes.DefaultTrustLevel, trustingPeriod, ubdPeriod, maxClockDrift, types.NewHeight(0, uint64(suite.chainA.GetContext().BlockHeight())), commitmenttypes.GetSDKSpecs(), ibctesting.UpgradePath, false, false),
+			ibctmtypes.NewClientState(suite.chainA.ChainID, ibctmtypes.DefaultTrustLevel, trustingPeriod, ubdPeriod, maxClockDrift, types.NewHeight(0, uint64(tmpCtx.BlockHeight())), commitmenttypes.GetSDKSpecs(), ibctesting.UpgradePath, false, false),
 			false,
 		},
 		{

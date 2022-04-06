@@ -3,9 +3,10 @@ package keeper_test
 import (
 	"encoding/hex"
 	"fmt"
+	tmtypes "github.com/okex/exchain/libs/tendermint/types"
 	"time"
 
-	tmtypes "github.com/tendermint/tendermint/types"
+	// tmtypes "github.com/tendermint/tendermint/types"
 
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"

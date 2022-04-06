@@ -1,8 +1,11 @@
 package keeper_test
 
 import (
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	upgradetypes "github.com/okex/exchain/libs/cosmos-sdk/x/upgrade"
+	govtypes "github.com/okex/exchain/x/gov/types"
+
+	// govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	// upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/exported"
 	ibctmtypes "github.com/okex/exchain/libs/ibc-go/modules/light-clients/07-tendermint/types"

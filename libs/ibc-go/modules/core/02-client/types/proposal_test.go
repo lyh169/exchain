@@ -2,11 +2,15 @@ package types_test
 
 import (
 	"fmt"
+	"github.com/okex/exchain/libs/cosmos-sdk/codec"
+	codectypes "github.com/okex/exchain/libs/cosmos-sdk/codec/types"
+	upgradetypes "github.com/okex/exchain/libs/cosmos-sdk/x/upgrade"
+	govtypes "github.com/okex/exchain/x/gov/types"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	// "github.com/cosmos/cosmos-sdk/codec"
+	// codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	// govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	// upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 
 	"github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	ibctmtypes "github.com/okex/exchain/libs/ibc-go/modules/light-clients/07-tendermint/types"

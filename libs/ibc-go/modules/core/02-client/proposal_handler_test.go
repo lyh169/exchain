@@ -1,9 +1,13 @@
 package client_test
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
+	govtypes "github.com/okex/exchain/x/gov/types"
+
+	// sdk "github.com/cosmos/cosmos-sdk/types"
+	// distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	distributiontypes "github.com/okex/exchain/libs/cosmos-sdk/x/distribution/types"
+	// govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	client "github.com/okex/exchain/libs/ibc-go/modules/core/02-client"
 	clienttypes "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	ibctmtypes "github.com/okex/exchain/libs/ibc-go/modules/light-clients/07-tendermint/types"

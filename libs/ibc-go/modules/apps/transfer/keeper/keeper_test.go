@@ -1,10 +1,11 @@
 package keeper_test
 
 import (
+	"github.com/okex/exchain/libs/tendermint/crypto"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	"github.com/tendermint/tendermint/crypto"
+	// "github.com/tendermint/tendermint/crypto"
 
 	"github.com/okex/exchain/libs/cosmos-sdk/baseapp"
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
