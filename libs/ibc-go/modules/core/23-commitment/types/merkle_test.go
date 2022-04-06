@@ -2,26 +2,28 @@ package types_test
 
 import (
 	"fmt"
+	abci "github.com/okex/exchain/libs/tendermint/abci/types"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
+	// abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/okex/exchain/libs/ibc-go/modules/core/23-commitment/types"
 )
 
 func (suite *MerkleTestSuite) TestVerifyMembership() {
 	suite.iavlStore.Set([]byte("MYKEY"), []byte("MYVALUE"))
-	cid := suite.store.Commit()
+	// cid := suite.store.Commit()
+	cid := suite.store.LastCommitID()
 
 	res := suite.store.Query(abci.RequestQuery{
 		Path:  fmt.Sprintf("/%s/key", suite.storeKey.Name()), // required path to get key/value+proof
 		Data:  []byte("MYKEY"),
 		Prove: true,
 	})
-	require.NotNil(suite.T(), res.ProofOps)
+	require.NotNil(suite.T(), res.GetProof())
 
-	proof, err := types.ConvertProofs(res.ProofOps)
+	proof, err := types.ConvertProofs(res.GetProof())
 	require.NoError(suite.T(), err)
 
 	suite.Require().NoError(proof.ValidateBasic())
@@ -77,7 +79,8 @@ func (suite *MerkleTestSuite) TestVerifyMembership() {
 
 func (suite *MerkleTestSuite) TestVerifyNonMembership() {
 	suite.iavlStore.Set([]byte("MYKEY"), []byte("MYVALUE"))
-	cid := suite.store.Commit()
+	// cid := suite.store.Commit()
+	cid := suite.store.LastCommitID()
 
 	// Get Proof
 	res := suite.store.Query(abci.RequestQuery{
@@ -85,9 +88,9 @@ func (suite *MerkleTestSuite) TestVerifyNonMembership() {
 		Data:  []byte("MYABSENTKEY"),
 		Prove: true,
 	})
-	require.NotNil(suite.T(), res.ProofOps)
+	require.NotNil(suite.T(), res.GetProof())
 
-	proof, err := types.ConvertProofs(res.ProofOps)
+	proof, err := types.ConvertProofs(res.GetProof())
 	require.NoError(suite.T(), err)
 
 	suite.Require().NoError(proof.ValidateBasic())
