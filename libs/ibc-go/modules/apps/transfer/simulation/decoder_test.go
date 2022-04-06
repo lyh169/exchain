@@ -68,5 +68,3 @@ func TestDecodeStore(t *testing.T) {
 		})
 	}
 }
-
-func
