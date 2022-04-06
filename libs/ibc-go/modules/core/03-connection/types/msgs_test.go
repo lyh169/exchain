@@ -64,10 +64,12 @@ func (suite *MsgTestSuite) SetupTest() {
 		Prove: true,
 	})
 
-	merkleProof, err := commitmenttypes.ConvertProofs(res.ProofOps)
+	// merkleProof, err := commitmenttypes.ConvertProofs(res.ProofOps)
+	merkleProof, err := commitmenttypes.ConvertProofs(res.GetProof())
 	suite.Require().NoError(err)
-	proof, err := app.AppCodec().Marshal(&merkleProof)
-	suite.Require().NoError(err)
+	// proof, err := app.AppCodec().Marshal(&merkleProof)
+	// suite.Require().NoError(err)
+	proof := app.AppCodec().MustMarshal(&merkleProof)
 
 	suite.proof = proof
 
