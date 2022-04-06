@@ -2,11 +2,13 @@ package simulation_test
 
 import (
 	"fmt"
+	"github.com/okex/exchain/libs/cosmos-sdk/types/kv"
+	tmkv "github.com/okex/exchain/libs/tendermint/libs/kv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cosmos/cosmos-sdk/types/kv"
+	// "github.com/cosmos/cosmos-sdk/types/kv"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/03-connection/simulation"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/03-connection/types"
 	host "github.com/okex/exchain/libs/ibc-go/modules/core/24-host"
@@ -56,7 +58,12 @@ func TestDecodeStore(t *testing.T) {
 	for i, tt := range tests {
 		i, tt := i, tt
 		t.Run(tt.name, func(t *testing.T) {
-			res, found := simulation.NewDecodeStore(cdc, kvPairs.Pairs[i], kvPairs.Pairs[i])
+			// 	res, found := simulation.NewDecodeStore(cdc, kvPairs.Pairs[i], kvPairs.Pairs[i])
+			kvA := tmkv.Pair{
+				Key:   kvPairs.Pairs[i].GetKey(),
+				Value: kvPairs.Pairs[i].GetValue(),
+			}
+			res, found := simulation.NewDecodeStore(cdc, kvA, kvA)
 			if i == len(tests)-1 {
 				require.False(t, found, string(kvPairs.Pairs[i].Key))
 				require.Empty(t, res, string(kvPairs.Pairs[i].Key))
