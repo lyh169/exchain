@@ -714,7 +714,7 @@ func (suite *KeeperTestSuite) TestUpgradeClient() {
 				proofUpgradedConsState, _ := suite.chainB.QueryUpgradeProof(upgradetypes.UpgradedConsStateKey(int64(lastHeight.GetRevisionHeight())), cs.GetLatestHeight().GetRevisionHeight())
 
 				msg, err = clienttypes.NewMsgUpgradeClient(path.EndpointA.ClientID, upgradedClient, upgradedConsState,
-					proofUpgradeClient, proofUpgradedConsState, suite.chainA.SenderAccount.GetAddress().String())
+					proofUpgradeClient, proofUpgradedConsState, suite.chainA.SenderAccount.GetAddress())
 				suite.Require().NoError(err)
 			},
 			expPass: true,
