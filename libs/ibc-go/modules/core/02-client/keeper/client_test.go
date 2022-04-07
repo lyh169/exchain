@@ -255,9 +255,10 @@ func (suite *KeeperTestSuite) TestUpdateClientTendermint() {
 
 func (suite *KeeperTestSuite) TestUpdateClientLocalhost() {
 	revision := types.ParseChainID(suite.chainA.ChainID)
-	var localhostClient exported.ClientState = localhosttypes.NewClientState(suite.chainA.ChainID, types.NewHeight(revision, uint64(suite.chainA.GetContext().BlockHeight())))
+	chainACtx := suite.chainA.GetContext()
+	var localhostClient exported.ClientState = localhosttypes.NewClientState(suite.chainA.ChainID, types.NewHeight(revision, uint64(chainACtx.BlockHeight())))
 
-	ctx := suite.chainA.GetContext().WithBlockHeight(suite.chainA.GetContext().BlockHeight() + 1)
+	ctx := suite.chainA.GetContext().WithBlockHeight(chainACtx.BlockHeight() + 1)
 	err := suite.chainA.App.GetIBCKeeper().ClientKeeper.UpdateClient(ctx, exported.Localhost, nil)
 	suite.Require().NoError(err)
 
@@ -285,8 +286,9 @@ func (suite *KeeperTestSuite) TestUpgradeClient() {
 		{
 			name: "successful upgrade",
 			setup: func() {
+				tmpCtx := suite.chainB.GetContext()
 				// last Height is at next block
-				lastHeight = clienttypes.NewHeight(0, uint64(suite.chainB.GetContext().BlockHeight()+1))
+				lastHeight = clienttypes.NewHeight(0, uint64(tmpCtx.BlockHeight()+1))
 
 				// zero custom fields and store in upgrade store
 				suite.chainB.GetSimApp().UpgradeKeeper.SetUpgradedClient(suite.chainB.GetContext(), int64(lastHeight.GetRevisionHeight()), upgradedClientBz)
@@ -310,7 +312,8 @@ func (suite *KeeperTestSuite) TestUpgradeClient() {
 			name: "client state not found",
 			setup: func() {
 				// last Height is at next block
-				lastHeight = clienttypes.NewHeight(0, uint64(suite.chainB.GetContext().BlockHeight()+1))
+				tmpCtx := suite.chainB.GetContext()
+				lastHeight = clienttypes.NewHeight(0, uint64(tmpCtx.BlockHeight()+1))
 
 				// zero custom fields and store in upgrade store
 				suite.chainB.GetSimApp().UpgradeKeeper.SetUpgradedClient(suite.chainB.GetContext(), int64(lastHeight.GetRevisionHeight()), upgradedClientBz)
@@ -337,8 +340,9 @@ func (suite *KeeperTestSuite) TestUpgradeClient() {
 			setup: func() {
 				// client is frozen
 
+				tmpCtx := suite.chainB.GetContext()
 				// last Height is at next block
-				lastHeight = clienttypes.NewHeight(0, uint64(suite.chainB.GetContext().BlockHeight()+1))
+				lastHeight = clienttypes.NewHeight(0, uint64(tmpCtx.BlockHeight()+1))
 
 				// zero custom fields and store in upgrade store
 				suite.chainB.GetSimApp().UpgradeKeeper.SetUpgradedClient(suite.chainB.GetContext(), int64(lastHeight.GetRevisionHeight()), upgradedClientBz)
@@ -368,7 +372,8 @@ func (suite *KeeperTestSuite) TestUpgradeClient() {
 			name: "tendermint client VerifyUpgrade fails",
 			setup: func() {
 				// last Height is at next block
-				lastHeight = clienttypes.NewHeight(0, uint64(suite.chainB.GetContext().BlockHeight()+1))
+				tmpCtx := suite.chainB.GetContext()
+				lastHeight = clienttypes.NewHeight(0, uint64(tmpCtx.BlockHeight()+1))
 
 				// zero custom fields and store in upgrade store
 				suite.chainB.GetSimApp().UpgradeKeeper.SetUpgradedClient(suite.chainB.GetContext(), int64(lastHeight.GetRevisionHeight()), upgradedClientBz)
@@ -674,7 +679,7 @@ func (suite *KeeperTestSuite) TestUpdateClientEventEmission() {
 
 	msg, err := clienttypes.NewMsgUpdateClient(
 		path.EndpointA.ClientID, header,
-		suite.chainA.SenderAccount.GetAddress().String(),
+		suite.chainA.SenderAccount.GetAddress(),
 	)
 
 	result, err := suite.chainA.SendMsgs(msg)
@@ -692,7 +697,8 @@ func (suite *KeeperTestSuite) TestUpdateClientEventEmission() {
 			bz, err := hex.DecodeString(string(attr.Value))
 			suite.Require().NoError(err)
 
-			emittedHeader, err := types.UnmarshalHeader(suite.chainA.App.AppCodec(), bz)
+			// emittedHeader, err := types.UnmarshalHeader(suite.chainA.App.AppCodec(), bz)
+			emittedHeader, err := types.UnmarshalHeader(suite.chainA.App.AppCodec().GetProtocMarshal(), bz)
 			suite.Require().NoError(err)
 			suite.Require().Equal(header, emittedHeader)
 		}

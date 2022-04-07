@@ -186,27 +186,29 @@ func (chain *TestChain) QueryProofAtHeight(key []byte, height int64) ([]byte, cl
 
 // QueryUpgradeProof performs an abci query with the given key and returns the proto encoded merkle proof
 // for the query and the height at which the proof will succeed on a tendermint verifier.
-// func (chain *TestChain) QueryUpgradeProof(key []byte, height uint64) ([]byte, clienttypes.Height) {
-// 	res := chain.App.Query(abci.RequestQuery{
-// 		Path:   "store/upgrade/key",
-// 		Height: int64(height - 1),
-// 		Data:   key,
-// 		Prove:  true,
-// 	})
+func (chain *TestChain) QueryUpgradeProof(key []byte, height uint64) ([]byte, clienttypes.Height) {
+	res := chain.App.Query(abci.RequestQuery{
+		Path:   "store/upgrade/key",
+		Height: int64(height - 1),
+		Data:   key,
+		Prove:  true,
+	})
 
-// 	merkleProof, err := commitmenttypes.ConvertProofs(res.ProofOps)
-// 	require.NoError(chain.t, err)
+	//	merkleProof, err := commitmenttypes.ConvertProofs(res.ProofOps)
+	merkleProof, err := commitmenttypes.ConvertProofs(res.GetProof())
+	require.NoError(chain.t, err)
 
-// 	proof, err := chain.App.AppCodec().Marshal(&merkleProof)
-// 	require.NoError(chain.t, err)
+	// proof, err := chain.App.AppCodec().Marshal(&merkleProof)
+	// require.NoError(chain.t, err)
+	proof := chain.App.AppCodec().MustMarshal(&merkleProof)
 
-// 	revision := clienttypes.ParseChainID(chain.ChainID)
+	revision := clienttypes.ParseChainID(chain.ChainID)
 
-// 	// proof height + 1 is returned as the proof created corresponds to the height the proof
-// 	// was created in the IAVL tree. Tendermint and subsequently the clients that rely on it
-// 	// have heights 1 above the IAVL tree. Thus we return proof height + 1
-// 	return proof, clienttypes.NewHeight(revision, uint64(res.Height+1))
-// }
+	// proof height + 1 is returned as the proof created corresponds to the height the proof
+	// was created in the IAVL tree. Tendermint and subsequently the clients that rely on it
+	// have heights 1 above the IAVL tree. Thus we return proof height + 1
+	return proof, clienttypes.NewHeight(revision, uint64(res.Height+1))
+}
 
 // QueryConsensusStateProof performs an abci query for a consensus state
 // stored on the given clientID. The proof and consensusHeight are returned.
