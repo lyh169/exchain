@@ -383,6 +383,7 @@ func (suite *KeeperTestSuite) TestHandleTimeoutPacket() {
 		packetKey []byte
 		path      *ibctesting.Path
 	)
+	tmpCtx := suite.chainB.GetContext()
 
 	testCases := []struct {
 		name     string
@@ -392,7 +393,7 @@ func (suite *KeeperTestSuite) TestHandleTimeoutPacket() {
 		{"success: ORDERED", func() {
 			path.SetChannelOrdered()
 			suite.coordinator.Setup(path)
-			packet = channeltypes.NewPacket(ibctesting.MockPacketData, 1, path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, path.EndpointB.ChannelConfig.PortID, path.EndpointB.ChannelID, clienttypes.GetSelfHeight(suite.chainB.GetContext()), uint64(suite.chainB.GetContext().BlockTime().UnixNano()))
+			packet = channeltypes.NewPacket(ibctesting.MockPacketData, 1, path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, path.EndpointB.ChannelConfig.PortID, path.EndpointB.ChannelID, clienttypes.GetSelfHeight(suite.chainB.GetContext()), uint64(tmpCtx.BlockTime().UnixNano()))
 
 			// create packet commitment
 			err := path.EndpointA.SendPacket(packet)
@@ -405,7 +406,7 @@ func (suite *KeeperTestSuite) TestHandleTimeoutPacket() {
 		}, true},
 		{"success: UNORDERED", func() {
 			suite.coordinator.Setup(path)
-			packet = channeltypes.NewPacket(ibctesting.MockPacketData, 1, path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, path.EndpointB.ChannelConfig.PortID, path.EndpointB.ChannelID, clienttypes.GetSelfHeight(suite.chainB.GetContext()), uint64(suite.chainB.GetContext().BlockTime().UnixNano()))
+			packet = channeltypes.NewPacket(ibctesting.MockPacketData, 1, path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, path.EndpointB.ChannelConfig.PortID, path.EndpointB.ChannelID, clienttypes.GetSelfHeight(suite.chainB.GetContext()), uint64(tmpCtx.BlockTime().UnixNano()))
 
 			// create packet commitment
 			err := path.EndpointA.SendPacket(packet)
@@ -671,6 +672,7 @@ func (suite *KeeperTestSuite) TestUpgradeClient() {
 	newClientHeight := clienttypes.NewHeight(1, 1)
 	newChainId := "newChainId-1"
 
+	tmpCtx := suite.chainB.GetContext()
 	cases := []struct {
 		name    string
 		setup   func()
@@ -689,7 +691,7 @@ func (suite *KeeperTestSuite) TestUpgradeClient() {
 				}
 
 				// last Height is at next block
-				lastHeight = clienttypes.NewHeight(0, uint64(suite.chainB.GetContext().BlockHeight()+1))
+				lastHeight = clienttypes.NewHeight(0, uint64(tmpCtx.BlockHeight()+1))
 
 				upgradedClientBz, err := clienttypes.MarshalClientState(suite.chainA.App.AppCodec(), upgradedClient)
 				suite.Require().NoError(err)

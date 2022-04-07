@@ -1,7 +1,8 @@
 package types_test
 
 import (
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	codectypes "github.com/okex/exchain/libs/cosmos-sdk/codec/types"
+	// codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	commitmenttypes "github.com/okex/exchain/libs/ibc-go/modules/core/23-commitment/types"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/exported"

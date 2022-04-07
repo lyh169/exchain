@@ -2,6 +2,8 @@ package ibctesting_test
 
 import (
 	"fmt"
+	tmrand "github.com/okex/exchain/libs/tendermint/libs/rand"
+	dbm "github.com/okex/exchain/libs/tm-db"
 	"testing"
 	"time"
 
@@ -25,8 +27,8 @@ import (
 	"github.com/okex/exchain/libs/ibc-go/testing/simapp/params"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/suite"
-	tmrand "github.com/tendermint/tendermint/libs/rand"
-	dbm "github.com/tendermint/tm-db"
+	// tmrand "github.com/tendermint/tendermint/libs/rand"
+	// dbm "github.com/tendermint/tm-db"
 
 	ibcclientcli "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/client/cli"
 	"github.com/okex/exchain/libs/ibc-go/testing/simapp"

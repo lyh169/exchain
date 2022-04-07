@@ -2,12 +2,16 @@ package keeper_test
 
 import (
 	"fmt"
+	codectypes "github.com/okex/exchain/libs/cosmos-sdk/codec/types"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
+	grpctypes "github.com/okex/exchain/libs/cosmos-sdk/types/grpc"
+	"github.com/okex/exchain/libs/cosmos-sdk/types/query"
 	"time"
 
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	grpctypes "github.com/cosmos/cosmos-sdk/types/grpc"
-	"github.com/cosmos/cosmos-sdk/types/query"
+	//	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	//	sdk "github.com/cosmos/cosmos-sdk/types"
+	//	grpctypes "github.com/cosmos/cosmos-sdk/types/grpc"
+	//	"github.com/cosmos/cosmos-sdk/types/query"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
@@ -435,7 +439,7 @@ func (suite *KeeperTestSuite) TestQueryClientStatus() {
 					ClientId: path.EndpointA.ClientID,
 				}
 			},
-			true, exported.Active.String(),
+			true, string(exported.Active),
 		},
 		{
 			"Unknown client status",
@@ -452,7 +456,7 @@ func (suite *KeeperTestSuite) TestQueryClientStatus() {
 					ClientId: path.EndpointA.ClientID,
 				}
 			},
-			true, exported.Unknown.String(),
+			true, string(exported.Unknown),
 		},
 		{
 			"Frozen client status",
@@ -468,7 +472,7 @@ func (suite *KeeperTestSuite) TestQueryClientStatus() {
 					ClientId: path.EndpointA.ClientID,
 				}
 			},
-			true, exported.Frozen.String(),
+			true, string(exported.Frozen),
 		},
 	}
 
@@ -525,7 +529,7 @@ func (suite *KeeperTestSuite) TestQueryUpgradedConsensusStates() {
 				suite.ctx = suite.ctx.WithBlockHeight(height)
 
 				expConsensusState = types.MustPackConsensusState(suite.consensusState)
-				bz := types.MustMarshalConsensusState(suite.cdc, suite.consensusState)
+				bz := types.MustMarshalConsensusState(&suite.cdc, suite.consensusState)
 				err := suite.keeper.SetUpgradedConsensusState(suite.ctx, height, bz)
 				suite.Require().NoError(err)
 			},

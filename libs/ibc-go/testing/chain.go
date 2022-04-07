@@ -52,7 +52,8 @@ type TestChain struct {
 	ChainID       string
 	LastHeader    *ibctmtypes.Header // header for last block height committed
 	CurrentHeader tmproto.Header     // header for current block height
-	QueryServer   types.QueryServer
+	// QueryServer   types.QueryServer
+	QueryServer types.QueryService
 	//TxConfig      client.TxConfig
 	Codec *codec.CodecProxy
 

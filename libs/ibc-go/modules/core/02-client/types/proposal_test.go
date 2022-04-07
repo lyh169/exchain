@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/okex/exchain/libs/cosmos-sdk/codec"
 	codectypes "github.com/okex/exchain/libs/cosmos-sdk/codec/types"
+	govtypes "github.com/okex/exchain/libs/cosmos-sdk/x/gov/types"
 	upgradetypes "github.com/okex/exchain/libs/cosmos-sdk/x/upgrade"
-	govtypes "github.com/okex/exchain/x/gov/types"
 
 	// "github.com/cosmos/cosmos-sdk/codec"
 	// codectypes "github.com/cosmos/cosmos-sdk/codec/types"

@@ -2,14 +2,16 @@ package keeper_test
 
 import (
 	"fmt"
+	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
+	"github.com/okex/exchain/libs/cosmos-sdk/types/query"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/query"
-	ibctesting "github.com/okex/exchain/libs/ibc-go//testing"
 	clienttypes "github.com/okex/exchain/libs/ibc-go/modules/core/02-client/types"
 	connectiontypes "github.com/okex/exchain/libs/ibc-go/modules/core/03-connection/types"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/04-channel/types"
 	"github.com/okex/exchain/libs/ibc-go/modules/core/exported"
+	// sdk "github.com/cosmos/cosmos-sdk/types"
+	// "github.com/cosmos/cosmos-sdk/types/query"
+	ibctesting "github.com/okex/exchain/libs/ibc-go/testing"
 )
 
 func (suite *KeeperTestSuite) TestQueryChannel() {
@@ -525,11 +527,12 @@ func (suite *KeeperTestSuite) TestQueryChannelConsensusState() {
 				path := ibctesting.NewPath(suite.chainA, suite.chainB)
 				suite.coordinator.Setup(path)
 
+				tmpCtx := suite.chainA.GetContext()
 				req = &types.QueryChannelConsensusStateRequest{
 					PortId:         path.EndpointA.ChannelConfig.PortID,
 					ChannelId:      path.EndpointA.ChannelID,
 					RevisionNumber: 0,
-					RevisionHeight: uint64(suite.chainA.GetContext().BlockHeight()), // use current height
+					RevisionHeight: uint64(tmpCtx.BlockHeight()), // use current height
 				}
 			}, false,
 		},
