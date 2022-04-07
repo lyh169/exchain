@@ -383,10 +383,11 @@ func (suite *KeeperTestSuite) TestQueryConnectionConsensusState() {
 				path := ibctesting.NewPath(suite.chainA, suite.chainB)
 				suite.coordinator.Setup(path)
 
+				tmpCtx := suite.chainA.GetContext()
 				req = &types.QueryConnectionConsensusStateRequest{
 					ConnectionId:   path.EndpointA.ConnectionID,
 					RevisionNumber: 0,
-					RevisionHeight: uint64(suite.chainA.GetContext().BlockHeight()), // use current height
+					RevisionHeight: uint64(tmpCtx.BlockHeight()), // use current height
 				}
 			}, false,
 		},
