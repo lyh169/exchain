@@ -3,6 +3,10 @@ package baseapp
 import (
 	"encoding/hex"
 	"fmt"
+	"time"
+
+	"github.com/spf13/viper"
+
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 	sdkerrors "github.com/okex/exchain/libs/cosmos-sdk/types/errors"
 	"github.com/okex/exchain/libs/cosmos-sdk/x/auth/exported"
@@ -10,8 +14,6 @@ import (
 	abci "github.com/okex/exchain/libs/tendermint/abci/types"
 	"github.com/okex/exchain/libs/tendermint/libs/log"
 	sm "github.com/okex/exchain/libs/tendermint/state"
-	"github.com/spf13/viper"
-	"time"
 )
 
 type (
@@ -29,7 +31,7 @@ const (
 	dttRoutineStepFinished
 
 	keepAliveIntervalMS = 5
-	maxConcurrentCount = 4
+	maxConcurrentCount  = 4
 )
 
 type DeliverTxTask struct {
@@ -275,6 +277,7 @@ func (dttm *DTTManager) deliverTxs(txs [][]byte) {
 }
 
 func (dttm *DTTManager) concurrentBasic(txByte []byte, index int) *DeliverTxTask {
+	//	dttm.app.logger.With("giskook").Info("basic", index)
 	// create a new task
 	var realTx sdk.Tx
 	var err error
@@ -323,6 +326,7 @@ func (dttm *DTTManager) runConcurrentAnte(task *DeliverTxTask) error {
 	if dttm.app.anteHandler == nil {
 		return fmt.Errorf("anteHandler cannot be nil")
 	}
+	//	dttm.app.logger.With("giskook").Info("run ante", task.index)
 
 	curDttr := dttm.dttRoutineList[task.routineIndex]
 	curDttr.step = dttRoutineStepAnteStart
@@ -351,6 +355,7 @@ func (dttm *DTTManager) runConcurrentAnte(task *DeliverTxTask) error {
 
 	task.info.ctx.SetCache(sdk.NewCache(dttm.app.blockCache, useCache(runTxModeDeliverPartConcurrent))) // one cache for a tx
 
+	//dttm.app.logger.With("giskook").Info("run real ante", task.index)
 	err := dttm.runAnte(task)
 	task.err = err
 
@@ -418,6 +423,7 @@ func (dttm *DTTManager) runAnte(task *DeliverTxTask) error {
 }
 
 func (dttm *DTTManager) serialRoutine() {
+	//dttm.app.logger.With("giskook").Info("start serial routine")
 	keepAliveTicker := time.NewTicker(keepAliveIntervalMS * time.Millisecond)
 	nextTaskRoutine := int8(-1)
 	for {
@@ -431,6 +437,7 @@ func (dttm *DTTManager) serialRoutine() {
 			keepAliveTicker.Stop()
 			nextTaskRoutine = -1
 
+			dttm.app.logger.With("giskook", task.index).Info("normal")
 			dttm.serialIndex = task.index
 			dttm.serialTask = task
 			rt.step = dttRoutineStepSerial
@@ -449,6 +456,7 @@ func (dttm *DTTManager) serialRoutine() {
 			}
 
 		case <-keepAliveTicker.C:
+			dttm.app.logger.With("giskook", nextTaskRoutine).Info("ticker")
 			if dttm.serialTask == nil && nextTaskRoutine >= 0 && len(dttm.serialCh) == 0 {
 				dttr := dttm.dttRoutineList[nextTaskRoutine]
 				if dttr.task.index == dttm.serialIndex+1 && dttr.readyForSerialExecution() {
@@ -545,6 +553,7 @@ func compareTasks(target *dttRoutine, base *DeliverTxTask) (notCare bool, needRe
 func (dttm *DTTManager) serialExecution() {
 	info := dttm.serialTask.info
 	handler := info.handler
+	//	dttm.app.logger.With("giskook").Info("serial excecution", dttm.serialTask.index)
 
 	err := dttm.serialHandleBeforeRunMsg(info)
 	if err != nil {
@@ -639,11 +648,14 @@ func (app *BaseApp) DeliverTxsConcurrent(txs [][]byte) []*abci.ResponseDeliverTx
 		app.deliverTxsMgr = NewDTTManager(app)
 	}
 
+	//	app.logger.With("giskook").Info("deliver txs concurrent start")
+
 	app.deliverTxsMgr.deliverTxs(txs)
 
 	if len(txs) > 0 {
 		//waiting for call back
 		<-app.deliverTxsMgr.done
+		//app.logger.With("giskook").Info("deliver txs concurrent stop")
 		close(app.deliverTxsMgr.done)
 	}
 	app.logger.Info("InvalidTxs", "count", app.deliverTxsMgr.invalidTxs)
