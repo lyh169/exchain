@@ -3,7 +3,7 @@
 
 package db
 
-import "github.com/cosmos/gorocksdb"
+import "github.com/tecbot/gorocksdb"
 
 type RocksDBBatch struct {
 	db    *RocksDB
