@@ -295,6 +295,7 @@ func (conR *Reactor) AddPeer(peer p2p.Peer) {
 	}
 	// Begin routines for this peer.
 	go conR.gossipDataRoutine(peer, peerState)
+	go conR.gossipProposalRoutine(peer, peerState)
 	go conR.gossipVotesRoutine(peer, peerState)
 	go conR.gossipVCRoutine(peer, peerState)
 	go conR.queryMaj23Routine(peer, peerState)
@@ -678,7 +679,7 @@ OUTER_LOOP:
 
 		// Send proposal Block parts?
 		if rs.ProposalBlockParts.HasHeader(prs.ProposalBlockPartsHeader) {
-			if index, ok := rs.ProposalBlockParts.BitArray().Sub(prs.ProposalBlockParts.Copy()).PickRandom(); ok {
+			for index := 0; index < rs.ProposalBlockParts.Total(); index++ {
 				part := rs.ProposalBlockParts.GetPart(index)
 				msg := &BlockPartMessage{
 					Height: rs.Height, // This tells peer that this part applies to us.
@@ -686,11 +687,10 @@ OUTER_LOOP:
 					Part:   part,
 				}
 				logger.Debug("Sending block part", "height", prs.Height, "round", prs.Round)
-				if peer.Send(DataChannel, cdc.MustMarshalBinaryBare(msg)) {
-					ps.SetHasProposalBlockPart(prs.Height, prs.Round, index, BP_SEND, conR.conS.bt)
-				}
-				continue OUTER_LOOP
+				peer.Send(DataChannel, cdc.MustMarshalBinaryBare(msg))
+				time.Sleep(time.Millisecond)
 			}
+			time.Sleep(conR.conS.config.PeerGossipSleepDuration)
 		}
 
 		// If the peer is on a previous height that we have, help catch up.
@@ -711,45 +711,6 @@ OUTER_LOOP:
 				continue OUTER_LOOP
 			}
 			conR.gossipDataForCatchup(heightLogger, rs, prs, ps, peer)
-			continue OUTER_LOOP
-		}
-
-		// If height and round don't match, sleep.
-		if (rs.Height != prs.Height) || (rs.Round != prs.Round) {
-			//logger.Info("Peer Height|Round mismatch, sleeping", "peerHeight", prs.Height, "peerRound", prs.Round, "peer", peer)
-			time.Sleep(conR.conS.config.PeerGossipSleepDuration)
-			continue OUTER_LOOP
-		}
-
-		// By here, height and round match.
-		// Proposal block parts were already matched and sent if any were wanted.
-		// (These can match on hash so the round doesn't matter)
-		// Now consider sending other things, like the Proposal itself.
-
-		// Send Proposal && ProposalPOL BitArray?
-		if rs.Proposal != nil && !prs.Proposal {
-			// Proposal: share the proposal metadata with peer.
-			{
-				msg := &ProposalMessage{Proposal: rs.Proposal}
-				logger.Debug("Sending proposal", "height", prs.Height, "round", prs.Round)
-				if peer.Send(DataChannel, cdc.MustMarshalBinaryBare(msg)) {
-					// NOTE[ZM]: A peer might have received different proposal msg so this Proposal msg will be rejected!
-					ps.SetHasProposal(rs.Proposal)
-				}
-			}
-			// ProposalPOL: lets peer know which POL votes we have so far.
-			// Peer must receive ProposalMessage first.
-			// rs.Proposal was validated, so rs.Proposal.POLRound <= rs.Round,
-			// so we definitely have rs.Votes.Prevotes(rs.Proposal.POLRound).
-			if 0 <= rs.Proposal.POLRound {
-				msg := &ProposalPOLMessage{
-					Height:           rs.Height,
-					ProposalPOLRound: rs.Proposal.POLRound,
-					ProposalPOL:      rs.Votes.Prevotes(rs.Proposal.POLRound).BitArray(),
-				}
-				logger.Debug("Sending POL", "height", prs.Height, "round", prs.Round)
-				peer.Send(DataChannel, cdc.MustMarshalBinaryBare(msg))
-			}
 			continue OUTER_LOOP
 		}
 
@@ -801,6 +762,63 @@ func (conR *Reactor) gossipDataForCatchup(logger log.Logger, rs *cstypes.RoundSt
 	}
 	//logger.Info("No parts to send in catch-up, sleeping")
 	time.Sleep(conR.conS.config.PeerGossipSleepDuration)
+}
+
+func (conR *Reactor) gossipProposalRoutine(peer p2p.Peer, ps *PeerState) {
+	logger := conR.Logger.With("peer", peer)
+
+OUTER_LOOP:
+	for {
+		// Manage disconnects from self or peer.
+		if !peer.IsRunning() || !conR.IsRunning() {
+			logger.Info("Stopping gossipDataRoutine for peer")
+			return
+		}
+		rs := conR.getRoundState()
+		prs := ps.GetRoundState()
+
+		// If height and round don't match, sleep.
+		if (rs.Height != prs.Height) || (rs.Round != prs.Round) {
+			//logger.Info("Peer Height|Round mismatch, sleeping", "peerHeight", prs.Height, "peerRound", prs.Round, "peer", peer)
+			time.Sleep(conR.conS.config.PeerGossipSleepDuration)
+			continue OUTER_LOOP
+		}
+
+		// By here, height and round match.
+		// Proposal block parts were already matched and sent if any were wanted.
+		// (These can match on hash so the round doesn't matter)
+		// Now consider sending other things, like the Proposal itself.
+
+		// Send Proposal && ProposalPOL BitArray?
+		if rs.Proposal != nil {
+			// Proposal: share the proposal metadata with peer.
+			{
+				msg := &ProposalMessage{Proposal: rs.Proposal}
+				logger.Debug("Sending proposal", "height", prs.Height, "round", prs.Round)
+				if peer.Send(DataChannel, cdc.MustMarshalBinaryBare(msg)) {
+					// NOTE[ZM]: A peer might have received different proposal msg so this Proposal msg will be rejected!
+					ps.SetHasProposal(rs.Proposal)
+				}
+			}
+			// ProposalPOL: lets peer know which POL votes we have so far.
+			// Peer must receive ProposalMessage first.
+			// rs.Proposal was validated, so rs.Proposal.POLRound <= rs.Round,
+			// so we definitely have rs.Votes.Prevotes(rs.Proposal.POLRound).
+			if 0 <= rs.Proposal.POLRound {
+				msg := &ProposalPOLMessage{
+					Height:           rs.Height,
+					ProposalPOLRound: rs.Proposal.POLRound,
+					ProposalPOL:      rs.Votes.Prevotes(rs.Proposal.POLRound).BitArray(),
+				}
+				logger.Debug("Sending POL", "height", prs.Height, "round", prs.Round)
+				peer.Send(DataChannel, cdc.MustMarshalBinaryBare(msg))
+			}
+		}
+
+		// Nothing to do. Sleep.
+		time.Sleep(conR.conS.config.PeerGossipSleepDuration)
+		continue OUTER_LOOP
+	}
 }
 
 func (conR *Reactor) gossipVotesRoutine(peer p2p.Peer, ps *PeerState) {
