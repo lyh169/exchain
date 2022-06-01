@@ -68,9 +68,10 @@ func (store *Store) Get(key []byte) (value []byte) {
 
 	types.AssertValidKey(key)
 
-	cacheValue, ok := store.dirty[string(key)]
+	keyStr := byteSliceToStr(key)
+	cacheValue, ok := store.dirty[keyStr]
 	if !ok {
-		if c, ok := store.readList[string(key)]; ok {
+		if c, ok := store.readList[keyStr]; ok {
 			value = c
 		} else {
 			value = store.parent.Get(key)
@@ -358,7 +359,7 @@ func (store *Store) dirtyItems(start, end []byte) {
 
 // Only entrypoint to mutate store.cache.
 func (store *Store) setCacheValue(key, value []byte, deleted bool, dirty bool) {
-	keyStr := string(key)
+	keyStr := byteSliceToStr(key)
 	if !dirty {
 		store.readList[keyStr] = value
 		return
