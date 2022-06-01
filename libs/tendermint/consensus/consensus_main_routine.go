@@ -179,6 +179,9 @@ func (cs *State) handleMsg(mi msgInfo) {
 			err = nil
 		}
 	case *VoteMessage:
+		if cs.hasVC != msg.Vote.HasVC {
+			return
+		}
 		// attempt to add the vote and dupeout the validator if its a duplicate signature
 		// if the vote gives us a 2/3-any or 2/3-one, we transition
 		added, err = cs.tryAddVote(msg.Vote, peerID)

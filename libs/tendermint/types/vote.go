@@ -57,6 +57,7 @@ type Vote struct {
 	ValidatorAddress Address       `json:"validator_address"`
 	ValidatorIndex   int           `json:"validator_index"`
 	Signature        []byte        `json:"signature"`
+	HasVC            bool          `json:"has_vc"`
 }
 
 func (vote Vote) AminoSize(cdc *amino.Codec) int {

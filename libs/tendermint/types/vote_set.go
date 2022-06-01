@@ -246,6 +246,13 @@ func (voteSet *VoteSet) addVerifiedVote(
 			voteSet.votes[valIndex] = vote
 			voteSet.votesBitArray.SetIndex(valIndex, true)
 		}
+
+		if vote.HasVC {
+			voteSet.votes[valIndex] = vote
+			voteSet.votesBitArray.SetIndex(valIndex, true)
+			return true, conflicting
+		}
+
 		// Otherwise don't add it to voteSet.votes
 	} else {
 		// Add to voteSet.votes and incr .sum
@@ -263,7 +270,7 @@ func (voteSet *VoteSet) addVerifiedVote(
 		// We'll add the vote in a bit.
 	} else {
 		// .votesByBlock doesn't exist...
-		if conflicting != nil {
+		if conflicting != nil && !vote.HasVC {
 			// ... and there's a conflicting vote.
 			// We're not even tracking this blockKey, so just forget it.
 			return false, conflicting
@@ -617,11 +624,17 @@ func newBlockVotes(peerMaj23 bool, numValidators int) *blockVotes {
 
 func (vs *blockVotes) addVerifiedVote(vote *Vote, votingPower int64) {
 	valIndex := vote.ValidatorIndex
-	if existing := vs.votes[valIndex]; existing == nil {
+	if existing := vs.votes[valIndex]; existing == nil || vote.HasVC {
 		vs.bitArray.SetIndex(valIndex, true)
 		vs.votes[valIndex] = vote
 		vs.sum += votingPower
 	}
+}
+
+func (vs *blockVotes) updateVote(vote *Vote) {
+	valIndex := vote.ValidatorIndex
+	vs.bitArray.SetIndex(valIndex, true)
+	vs.votes[valIndex] = vote
 }
 
 func (vs *blockVotes) getByIndex(index int) *Vote {
