@@ -244,6 +244,7 @@ func (cs *State) signVote(
 	}
 
 	err := cs.privValidator.SignVote(cs.state.ChainID, vote)
+	vote.HasVC = cs.hasVC
 	return vote, err
 }
 
