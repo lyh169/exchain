@@ -111,6 +111,7 @@ func (cs *State) enterNewRoundAVC(height int64, round int, val *types.Validator)
 	if cs.Votes.Round() == 0 {
 		cs.Votes.SetRound(1) // also track next round (round+1) to allow round-skipping
 	}
+	// cs.Votes.ClearVoteForAVC()
 	cs.TriggeredTimeoutPrecommit = false
 	cs.eventBus.PublishEventNewRound(cs.NewRoundEvent())
 	cs.metrics.Rounds.Set(float64(round))

@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"github.com/okex/exchain/libs/tendermint/consensus"
 	"github.com/okex/exchain/libs/tendermint/libs/automation"
 	"strings"
 	"sync"
@@ -150,6 +151,26 @@ func (voteSet *VoteSet) AddVote(vote *Vote) (added bool, err error) {
 	return voteSet.addVote(vote)
 }
 
+func (voteSet *VoteSet) ClearVoteForAVC() {
+	if voteSet == nil {
+		panic("ClearVoteForAVC() on nil VoteSet")
+	}
+	voteSet.mtx.Lock()
+	defer voteSet.mtx.Unlock()
+
+	for _, vote := range voteSet.votes {
+		if vote == nil || vote.HasVC {
+			continue
+		}
+		_, val := voteSet.valSet.GetByIndex(vote.ValidatorIndex)
+		if val == nil {
+			continue
+		}
+		voteSet.sum -= val.VotingPower
+		voteSet.votes[vote.ValidatorIndex] = nil
+	}
+}
+
 // NOTE: Validates as much as possible before attempting to verify the signature.
 func (voteSet *VoteSet) addVote(vote *Vote) (added bool, err error) {
 	if vote == nil {
@@ -239,7 +260,12 @@ func (voteSet *VoteSet) addVerifiedVote(
 		if existing.BlockID.Equals(vote.BlockID) {
 			panic("addVerifiedVote does not expect duplicate votes")
 		} else {
-			conflicting = existing
+			if consensus.ActiveViewChange && vote.HasVC && !existing.HasVC {
+				voteSet.votes[valIndex] = vote
+				voteSet.votesBitArray.SetIndex(valIndex, true)
+			} else {
+				conflicting = existing
+			}
 		}
 		// Replace vote if blockKey matches voteSet.maj23.
 		if voteSet.maj23 != nil && voteSet.maj23.Key() == blockKey {

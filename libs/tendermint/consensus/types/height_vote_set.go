@@ -132,6 +132,20 @@ func (hvs *HeightVoteSet) AddVote(vote *types.Vote, peerID p2p.ID) (added bool, 
 	return
 }
 
+func (hvs *HeightVoteSet) ClearVoteForAVC() {
+	hvs.mtx.Lock()
+	defer hvs.mtx.Unlock()
+
+	prevoteSet := hvs.getVoteSet(0, types.PrevoteType)
+	precommitSet := hvs.getVoteSet(0, types.PrecommitType)
+	if prevoteSet != nil {
+		prevoteSet.ClearVoteForAVC()
+	}
+	if precommitSet != nil {
+		precommitSet.ClearVoteForAVC()
+	}
+}
+
 func (hvs *HeightVoteSet) Prevotes(round int) *types.VoteSet {
 	hvs.mtx.Lock()
 	defer hvs.mtx.Unlock()
