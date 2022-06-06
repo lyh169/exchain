@@ -2,7 +2,6 @@ package watcher
 
 import (
 	"container/list"
-	stdlog "log"
 	"sync"
 )
 
@@ -21,7 +20,6 @@ func (l *idleWatchMessagesList) getWatchMessages() []WatchMessage {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 	if l.idleList.Len() == 0 {
-		stdlog.Println("giskook new")
 		return make([]WatchMessage, 0)
 	}
 	front := l.idleList.Remove(l.idleList.Front())
