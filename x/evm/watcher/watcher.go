@@ -27,7 +27,7 @@ type Watcher struct {
 	height        uint64
 	blockHash     common.Hash
 	header        types.Header
-	batch         *[]WatchMessage
+	batch         []WatchMessage
 	staleBatch    []WatchMessage
 	cumulativeGas map[uint64]uint64
 	gasUsed       uint64
@@ -102,13 +102,6 @@ func (w *Watcher) GetEvmTxIndex() uint64 {
 	return w.evmTxIndex
 }
 
-var wgPool = sync.Pool{
-	New: func() interface{} {
-		buf := make([]WatchMessage, 0, 2048)
-		return &buf
-	},
-}
-
 func (w *Watcher) NewHeight(height uint64, blockHash common.Hash, header types.Header) {
 	if !w.Enabled() {
 		return
@@ -116,17 +109,10 @@ func (w *Watcher) NewHeight(height uint64, blockHash common.Hash, header types.H
 	w.header = header
 	w.height = height
 	w.blockHash = blockHash
-	w.batch = wgPool.Get().(*[]WatchMessage)
-	*w.batch = (*w.batch)[:0]
+	w.batch = nil
 	// ResetTransferWatchData
 	w.watchData = &WatchData{}
 	w.evmTxIndex = 0
-}
-
-var txPool = sync.Pool{
-	New: func() interface{} {
-		return make([]common.Hash, 0, 1024)
-	},
 }
 
 func (w *Watcher) clean() {
@@ -134,8 +120,7 @@ func (w *Watcher) clean() {
 		delete(w.cumulativeGas, k)
 	}
 	w.gasUsed = 0
-	w.blockTxs = txPool.Get().([]common.Hash)
-	w.blockTxs = w.blockTxs[:0]
+	w.blockTxs = nil
 }
 
 func (w *Watcher) SaveContractCode(addr common.Address, code []byte) {
@@ -165,7 +150,7 @@ func (w *Watcher) SaveTransactionReceipt(status uint32, msg *evmtypes.MsgEthereu
 	w.UpdateCumulativeGas(txIndex, gasUsed)
 	wMsg := NewEvmTransactionReceipt(status, msg, txHash, w.blockHash, txIndex, w.height, data, w.cumulativeGas[txIndex], gasUsed)
 	if wMsg != nil {
-		*w.batch = append(*w.batch, wMsg)
+		w.batch = append(w.batch, wMsg)
 	}
 }
 
@@ -188,7 +173,7 @@ func (w *Watcher) SaveAccount(account auth.Account, isDirectly bool) {
 	wMsg := NewMsgAccount(account)
 	if wMsg != nil {
 		if isDirectly {
-			*w.batch = append(*w.batch, wMsg)
+			w.batch = append(w.batch, wMsg)
 		} else {
 			w.staleBatch = append(w.staleBatch, wMsg)
 		}
@@ -203,7 +188,7 @@ func (w *Watcher) AddDelAccMsg(account auth.Account, isDirectly bool) {
 	wMsg := NewDelAccMsg(account)
 	if wMsg != nil {
 		if isDirectly {
-			*w.batch = append(*w.batch, wMsg)
+			w.batch = append(w.batch, wMsg)
 		} else {
 			w.staleBatch = append(w.staleBatch, wMsg)
 		}
@@ -269,13 +254,12 @@ func (w *Watcher) SaveBlock(bloom ethtypes.Bloom) {
 
 	wMsg := NewMsgBlock(w.height, bloom, w.blockHash, w.header, uint64(0xffffffff), big.NewInt(int64(w.gasUsed)), w.blockTxs)
 	if wMsg != nil {
-		*w.batch = append(*w.batch, wMsg)
+		w.batch = append(w.batch, wMsg)
 	}
-	txPool.Put(w.blockTxs)
 
 	wInfo := NewMsgBlockInfo(w.height, w.blockHash)
 	if wInfo != nil {
-		*w.batch = append(*w.batch, wInfo)
+		w.batch = append(w.batch, wInfo)
 	}
 	w.SaveLatestHeight(w.height)
 }
@@ -286,7 +270,7 @@ func (w *Watcher) SaveLatestHeight(height uint64) {
 	}
 	wMsg := NewMsgLatestHeight(height)
 	if wMsg != nil {
-		*w.batch = append(*w.batch, wMsg)
+		w.batch = append(w.batch, wMsg)
 	}
 }
 
@@ -296,7 +280,7 @@ func (w *Watcher) SaveParams(params evmtypes.Params) {
 	}
 	wMsg := NewMsgParams(params)
 	if wMsg != nil {
-		*w.batch = append(*w.batch, wMsg)
+		w.batch = append(w.batch, wMsg)
 	}
 }
 
@@ -306,7 +290,7 @@ func (w *Watcher) SaveContractBlockedListItem(addr sdk.AccAddress) {
 	}
 	wMsg := NewMsgContractBlockedListItem(addr)
 	if wMsg != nil {
-		*w.batch = append(*w.batch, wMsg)
+		w.batch = append(w.batch, wMsg)
 	}
 }
 
@@ -316,7 +300,7 @@ func (w *Watcher) SaveContractMethodBlockedListItem(addr sdk.AccAddress, methods
 	}
 	wMsg := NewMsgContractMethodBlockedListItem(addr, methods)
 	if wMsg != nil {
-		*w.batch = append(*w.batch, wMsg)
+		w.batch = append(w.batch, wMsg)
 	}
 }
 
@@ -326,7 +310,7 @@ func (w *Watcher) SaveContractDeploymentWhitelistItem(addr sdk.AccAddress) {
 	}
 	wMsg := NewMsgContractDeploymentWhitelistItem(addr)
 	if wMsg != nil {
-		*w.batch = append(*w.batch, wMsg)
+		w.batch = append(w.batch, wMsg)
 	}
 }
 
@@ -358,7 +342,7 @@ func (w *Watcher) Finalize() {
 	if !w.Enabled() {
 		return
 	}
-	*w.batch = append(*w.batch, w.staleBatch...)
+	w.batch = append(w.batch, w.staleBatch...)
 	w.Reset()
 }
 
@@ -435,8 +419,8 @@ func (w *Watcher) CommitWatchData(data WatchData) {
 	}
 }
 
-func (w *Watcher) commitBatch(batch *[]WatchMessage) {
-	for _, b := range *batch {
+func (w *Watcher) commitBatch(batch []WatchMessage) {
+	for _, b := range batch {
 		w.filterMap[bytes2Key(b.GetKey())] = b
 	}
 
@@ -458,12 +442,10 @@ func (w *Watcher) commitBatch(batch *[]WatchMessage) {
 		delete(w.filterMap, k)
 	}
 
-	wgPool.Put(batch)
-
 	if checkWd {
-		keys := make([][]byte, len(*batch))
-		for i, _ := range *batch {
-			keys[i] = (*batch)[i].GetKey()
+		keys := make([][]byte, len(batch))
+		for i, _ := range batch {
+			keys[i] = batch[i].GetKey()
 		}
 		w.CheckWatchDB(keys, "producer")
 	}
@@ -508,8 +490,8 @@ func (w *Watcher) GetWatchDataFunc() func() ([]byte, error) {
 	// hold it in temp
 	batch := w.batch
 	return func() ([]byte, error) {
-		ddsBatch := make([]*Batch, len(*batch))
-		for i, b := range *batch {
+		ddsBatch := make([]*Batch, len(batch))
+		for i, b := range batch {
 			ddsBatch[i] = &Batch{b.GetKey(), []byte(b.GetValue()), b.GetType()}
 		}
 		value.Batches = ddsBatch
