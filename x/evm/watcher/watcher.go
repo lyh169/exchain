@@ -122,7 +122,7 @@ func (w *Watcher) clean() {
 		delete(w.cumulativeGas, k)
 	}
 	w.gasUsed = 0
-	w.blockTxs = nil
+	w.blockTxs = w.blockTxs[:0]
 }
 
 func (w *Watcher) SaveContractCode(addr common.Address, code []byte) {
