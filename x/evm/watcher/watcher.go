@@ -345,6 +345,7 @@ func (w *Watcher) Finalize() {
 		return
 	}
 	w.batch = append(w.batch, w.staleBatch...)
+	w.idleWatchMessagesList.putWatchMessages(w.staleBatch)
 	w.Reset()
 }
 
@@ -383,7 +384,7 @@ func (w *Watcher) Reset() {
 	if !w.Enabled() {
 		return
 	}
-	w.staleBatch = nil
+	w.staleBatch = w.idleWatchMessagesList.getWatchMessages()
 }
 
 func (w *Watcher) Commit() {
