@@ -3,6 +3,9 @@ package watcher
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
+	"sync"
+
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	jsoniter "github.com/json-iterator/go"
@@ -15,8 +18,6 @@ import (
 	tmstate "github.com/okex/exchain/libs/tendermint/state"
 	evmtypes "github.com/okex/exchain/x/evm/types"
 	"github.com/spf13/viper"
-	"math/big"
-	"sync"
 )
 
 var itjs = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -200,6 +201,7 @@ func (w *Watcher) DelayEraseKey() {
 	delayEraseKey := w.delayEraseKey
 	w.delayEraseKey = make([][]byte, 0)
 	w.dispatchJob(func() {
+		return
 		w.ExecuteDelayEraseKey(delayEraseKey)
 	})
 }
@@ -371,6 +373,7 @@ func (w *Watcher) Commit() {
 	batch := w.batch
 	w.clean()
 	w.dispatchJob(func() {
+		return
 		w.commitBatch(batch)
 	})
 }
