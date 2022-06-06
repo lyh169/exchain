@@ -213,6 +213,7 @@ func (w *Watcher) ExecuteDelayEraseKey(delayEraseKey [][]byte) {
 		return
 	}
 	for _, k := range delayEraseKey {
+		_ = k
 		// w.store.Delete(k)
 	}
 }
