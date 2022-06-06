@@ -3,6 +3,7 @@ package watcher
 import (
 	"encoding/hex"
 	"fmt"
+	stdlog "log"
 	"math/big"
 	"sync"
 
@@ -104,6 +105,7 @@ func (w *Watcher) GetEvmTxIndex() uint64 {
 
 var wgPool = sync.Pool{
 	New: func() interface{} {
+		stdlog.Println("giskook new")
 		return make([]WatchMessage, 0, 2048)
 	},
 }
