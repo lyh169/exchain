@@ -26,7 +26,7 @@ func (l *idleWatchMessagesList) getWatchMessages() []WatchMessage {
 	}
 	front := l.idleList.Remove(l.idleList.Front())
 
-	return front.([]WatchMessage)
+	return front.([]WatchMessage)[:0]
 }
 
 func (l *idleWatchMessagesList) putWatchMessages(msg []WatchMessage) {
