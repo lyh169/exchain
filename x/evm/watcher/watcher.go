@@ -122,12 +122,19 @@ func (w *Watcher) NewHeight(height uint64, blockHash common.Hash, header types.H
 	w.evmTxIndex = 0
 }
 
+var txPool = sync.Pool{
+	New: func() interface{} {
+		return make([]common.Hash, 0, 1024)
+	},
+}
+
 func (w *Watcher) clean() {
 	for k := range w.cumulativeGas {
 		delete(w.cumulativeGas, k)
 	}
 	w.gasUsed = 0
-	w.blockTxs = nil
+	w.blockTxs = txPool.Get().([]common.Hash)
+	w.blockTxs = w.blockTxs[:0]
 }
 
 func (w *Watcher) SaveContractCode(addr common.Address, code []byte) {
@@ -263,6 +270,7 @@ func (w *Watcher) SaveBlock(bloom ethtypes.Bloom) {
 	if wMsg != nil {
 		w.batch = append(w.batch, wMsg)
 	}
+	txPool.Put(w.blockTxs)
 
 	wInfo := NewMsgBlockInfo(w.height, w.blockHash)
 	if wInfo != nil {
