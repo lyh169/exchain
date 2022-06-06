@@ -201,7 +201,6 @@ func (w *Watcher) DelayEraseKey() {
 	delayEraseKey := w.delayEraseKey
 	w.delayEraseKey = make([][]byte, 0)
 	w.dispatchJob(func() {
-		return
 		w.ExecuteDelayEraseKey(delayEraseKey)
 	})
 }
@@ -214,7 +213,7 @@ func (w *Watcher) ExecuteDelayEraseKey(delayEraseKey [][]byte) {
 		return
 	}
 	for _, k := range delayEraseKey {
-		w.store.Delete(k)
+		// w.store.Delete(k)
 	}
 }
 
@@ -373,7 +372,6 @@ func (w *Watcher) Commit() {
 	batch := w.batch
 	w.clean()
 	w.dispatchJob(func() {
-		return
 		w.commitBatch(batch)
 	})
 }
@@ -410,13 +408,15 @@ func (w *Watcher) commitBatch(batch []WatchMessage) {
 	for _, b := range filterMap {
 		key := b.GetKey()
 		value := []byte(b.GetValue())
+		_ = key
+		_ = value
 		typeValue := b.GetType()
 		if typeValue == TypeDelete {
-			w.store.Delete(key)
+			//w.store.Delete(key)
 		} else {
-			w.store.Set(key, value)
+			//w.store.Set(key, value)
 			if typeValue == TypeState {
-				state.SetStateToLru(common.BytesToHash(key), value)
+				//state.SetStateToLru(common.BytesToHash(key), value)
 			}
 		}
 	}
