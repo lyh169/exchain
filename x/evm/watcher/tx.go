@@ -2,6 +2,7 @@ package watcher
 
 import (
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
 	tm "github.com/okex/exchain/libs/tendermint/abci/types"
@@ -84,7 +85,7 @@ func (w *Watcher) saveTx(tx WatchTx) {
 	}
 
 	if txWatchMessage := tx.GetTxWatchMessage(); txWatchMessage != nil {
-		w.batch = append(w.batch, txWatchMessage)
+		*w.batch = append(*w.batch, txWatchMessage)
 	}
 	w.blockTxs = append(w.blockTxs, tx.GetTxHash())
 }
@@ -95,6 +96,6 @@ func (w *Watcher) saveFailedReceipts(watchTx WatchTx, gasUsed uint64) {
 	}
 	w.UpdateCumulativeGas(watchTx.GetIndex(), gasUsed)
 	if receipts := watchTx.GetFailedReceipts(w.cumulativeGas[watchTx.GetIndex()], gasUsed); receipts != nil {
-		w.batch = append(w.batch, receipts)
+		*w.batch = append(*w.batch, receipts)
 	}
 }
