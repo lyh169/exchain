@@ -105,8 +105,8 @@ func (w *Watcher) GetEvmTxIndex() uint64 {
 
 var wgPool = sync.Pool{
 	New: func() interface{} {
-		stdlog.Println("giskook new")
-		return make([]WatchMessage, 0, 2048)
+		stdlog.Println("giskook new wg...")
+		return make([]WatchMessage, 0, 1024)
 	},
 }
 
@@ -126,6 +126,7 @@ func (w *Watcher) NewHeight(height uint64, blockHash common.Hash, header types.H
 
 var txPool = sync.Pool{
 	New: func() interface{} {
+		stdlog.Println("giskook new tx")
 		return make([]common.Hash, 0, 1024)
 	},
 }
