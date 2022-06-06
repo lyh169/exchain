@@ -41,8 +41,9 @@ type Watcher struct {
 
 	jobChan chan func()
 
-	evmTxIndex uint64
-	filterMap  map[string]WatchMessage
+	evmTxIndex            uint64
+	filterMap             map[string]WatchMessage
+	idleWatchMessagesList *idleWatchMessagesList
 }
 
 var (
@@ -69,14 +70,15 @@ func GetWatchLruSize() int {
 
 func NewWatcher(logger log.Logger) *Watcher {
 	watcher := &Watcher{
-		store:         InstanceOfWatchStore(),
-		cumulativeGas: make(map[uint64]uint64),
-		sw:            IsWatcherEnabled(),
-		firstUse:      true,
-		delayEraseKey: make([][]byte, 0),
-		watchData:     &WatchData{},
-		log:           logger,
-		filterMap:     make(map[string]WatchMessage),
+		store:                 InstanceOfWatchStore(),
+		cumulativeGas:         make(map[uint64]uint64),
+		sw:                    IsWatcherEnabled(),
+		firstUse:              true,
+		delayEraseKey:         make([][]byte, 0),
+		watchData:             &WatchData{},
+		log:                   logger,
+		filterMap:             make(map[string]WatchMessage),
+		idleWatchMessagesList: newIdleWatchMessageList(),
 	}
 	checkWd = viper.GetBool(FlagCheckWd)
 	return watcher
@@ -109,7 +111,7 @@ func (w *Watcher) NewHeight(height uint64, blockHash common.Hash, header types.H
 	w.header = header
 	w.height = height
 	w.blockHash = blockHash
-	w.batch = nil
+	w.batch = w.idleWatchMessagesList.getWatchMessages()
 	// ResetTransferWatchData
 	w.watchData = &WatchData{}
 	w.evmTxIndex = 0
@@ -449,6 +451,7 @@ func (w *Watcher) commitBatch(batch []WatchMessage) {
 		}
 		w.CheckWatchDB(keys, "producer")
 	}
+	w.idleWatchMessagesList.putWatchMessages(batch)
 }
 
 func (w *Watcher) commitCenterBatch(batch []*Batch) {
