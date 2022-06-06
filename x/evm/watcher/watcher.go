@@ -3,6 +3,9 @@ package watcher
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
+	"sync"
+
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	jsoniter "github.com/json-iterator/go"
@@ -15,8 +18,6 @@ import (
 	tmstate "github.com/okex/exchain/libs/tendermint/state"
 	evmtypes "github.com/okex/exchain/x/evm/types"
 	"github.com/spf13/viper"
-	"math/big"
-	"sync"
 )
 
 var itjs = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -41,6 +42,7 @@ type Watcher struct {
 	jobChan chan func()
 
 	evmTxIndex uint64
+	filterMap  map[string]WatchMessage
 }
 
 var (
@@ -66,7 +68,16 @@ func GetWatchLruSize() int {
 }
 
 func NewWatcher(logger log.Logger) *Watcher {
-	watcher := &Watcher{store: InstanceOfWatchStore(), cumulativeGas: make(map[uint64]uint64), sw: IsWatcherEnabled(), firstUse: true, delayEraseKey: make([][]byte, 0), watchData: &WatchData{}, log: logger}
+	watcher := &Watcher{
+		store:         InstanceOfWatchStore(),
+		cumulativeGas: make(map[uint64]uint64),
+		sw:            IsWatcherEnabled(),
+		firstUse:      true,
+		delayEraseKey: make([][]byte, 0),
+		watchData:     &WatchData{},
+		log:           logger,
+		filterMap:     make(map[string]WatchMessage),
+	}
 	checkWd = viper.GetBool(FlagCheckWd)
 	return watcher
 }
@@ -91,6 +102,12 @@ func (w *Watcher) GetEvmTxIndex() uint64 {
 	return w.evmTxIndex
 }
 
+var wgPool = sync.Pool{
+	New: func() interface{} {
+		return make([]WatchMessage, 0, 2048)
+	},
+}
+
 func (w *Watcher) NewHeight(height uint64, blockHash common.Hash, header types.Header) {
 	if !w.Enabled() {
 		return
@@ -98,16 +115,19 @@ func (w *Watcher) NewHeight(height uint64, blockHash common.Hash, header types.H
 	w.header = header
 	w.height = height
 	w.blockHash = blockHash
-	w.batch = []WatchMessage{} // reset batch
+	w.batch = wgPool.Get().([]WatchMessage)
+	w.batch = w.batch[:0]
 	// ResetTransferWatchData
 	w.watchData = &WatchData{}
 	w.evmTxIndex = 0
 }
 
 func (w *Watcher) clean() {
-	w.cumulativeGas = make(map[uint64]uint64)
+	for k := range w.cumulativeGas {
+		delete(w.cumulativeGas, k)
+	}
 	w.gasUsed = 0
-	w.blockTxs = []common.Hash{}
+	w.blockTxs = nil
 }
 
 func (w *Watcher) SaveContractCode(addr common.Address, code []byte) {
@@ -192,13 +212,20 @@ func (w *Watcher) DeleteAccount(addr sdk.AccAddress) {
 	w.delayEraseKey = append(w.delayEraseKey, key2)
 }
 
+var eraseKeyPool = sync.Pool{
+	New: func() interface{} {
+		return make([][]byte, 0, 1024)
+	},
+}
+
 func (w *Watcher) DelayEraseKey() {
 	if !w.Enabled() {
 		return
 	}
 	//hold it in temp
 	delayEraseKey := w.delayEraseKey
-	w.delayEraseKey = make([][]byte, 0)
+	w.delayEraseKey = eraseKeyPool.Get().([][]byte)
+	w.delayEraseKey = w.delayEraseKey[:0]
 	w.dispatchJob(func() {
 		w.ExecuteDelayEraseKey(delayEraseKey)
 	})
@@ -214,6 +241,7 @@ func (w *Watcher) ExecuteDelayEraseKey(delayEraseKey [][]byte) {
 	for _, k := range delayEraseKey {
 		w.store.Delete(k)
 	}
+	eraseKeyPool.Put(delayEraseKey)
 }
 
 func (w *Watcher) SaveState(addr common.Address, key, value []byte) {
@@ -360,7 +388,7 @@ func (w *Watcher) Reset() {
 	if !w.Enabled() {
 		return
 	}
-	w.staleBatch = []WatchMessage{}
+	w.staleBatch = nil
 }
 
 func (w *Watcher) Commit() {
@@ -399,12 +427,11 @@ func (w *Watcher) CommitWatchData(data WatchData) {
 }
 
 func (w *Watcher) commitBatch(batch []WatchMessage) {
-	filterMap := make(map[string]WatchMessage)
 	for _, b := range batch {
-		filterMap[bytes2Key(b.GetKey())] = b
+		w.filterMap[bytes2Key(b.GetKey())] = b
 	}
 
-	for _, b := range filterMap {
+	for _, b := range w.filterMap {
 		key := b.GetKey()
 		value := []byte(b.GetValue())
 		typeValue := b.GetType()
@@ -417,6 +444,12 @@ func (w *Watcher) commitBatch(batch []WatchMessage) {
 			}
 		}
 	}
+
+	for k := range w.filterMap {
+		delete(w.filterMap, k)
+	}
+
+	wgPool.Put(batch)
 
 	if checkWd {
 		keys := make([][]byte, len(batch))
