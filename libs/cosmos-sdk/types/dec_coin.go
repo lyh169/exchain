@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/tendermint/go-amino"
 
@@ -13,6 +14,12 @@ import (
 
 // ----------------------------------------------------------------------------
 // Decimal Coin
+
+var bufPool = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
+}
 
 // DecCoin defines a coin which can have additional decimal points
 type DecCoin struct {
@@ -205,12 +212,19 @@ func (coin DecCoin) IsValid() bool {
 }
 
 func (coin DecCoin) MarshalToAmino(cdc *amino.Codec) ([]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, coin.AminoSize(cdc)))
+	buf := bufPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufPool.Put(buf)
+
 	err := coin.MarshalAminoTo(cdc, buf)
 	if err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+
+	bytesCopy := make([]byte, buf.Len())
+	copy(bytesCopy, buf.Bytes())
+
+	return bytesCopy, nil
 }
 
 func (coin DecCoin) MarshalAminoTo(cdc *amino.Codec, buf *bytes.Buffer) error {

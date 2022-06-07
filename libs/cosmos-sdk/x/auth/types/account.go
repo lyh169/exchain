@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/tendermint/go-amino"
@@ -20,6 +21,12 @@ import (
 
 var _ exported.Account = (*BaseAccount)(nil)
 var _ exported.GenesisAccount = (*BaseAccount)(nil)
+
+var bufPool = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
+}
 
 // BaseAccount - a base account structure.
 // This can be extended by embedding within in your AppAccount.
@@ -125,13 +132,21 @@ func (acc BaseAccount) AminoSize(cdc *amino.Codec) int {
 }
 
 func (acc BaseAccount) MarshalToAmino(cdc *amino.Codec) ([]byte, error) {
-	var buf bytes.Buffer
+
+	buf := bufPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufPool.Put(buf)
+
 	buf.Grow(acc.AminoSize(cdc))
-	err := acc.MarshalAminoTo(cdc, &buf)
+	err := acc.MarshalAminoTo(cdc, buf)
 	if err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+
+	bytesCopy := make([]byte, buf.Len())
+	copy(bytesCopy, buf.Bytes())
+
+	return bytesCopy, nil
 }
 
 func (acc BaseAccount) MarshalAminoTo(cdc *amino.Codec, buf *bytes.Buffer) error {
@@ -340,8 +355,6 @@ func (acc BaseAccount) MarshalYAML() (interface{}, error) {
 
 	return string(bz), err
 }
-
-
 
 // NewModuleAddress creates an AccAddress from the hash of the module's name
 func NewModuleAddress(name string) sdk.AccAddress {

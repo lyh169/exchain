@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/tendermint/go-amino"
 
@@ -23,6 +24,12 @@ var (
 	_ authexported.GenesisAccount = (*ModuleAccount)(nil)
 	_ exported.ModuleAccountI     = (*ModuleAccount)(nil)
 )
+
+var bufPool = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
+}
 
 func init() {
 	// Register the ModuleAccount type as a GenesisAccount so that when no
@@ -109,13 +116,18 @@ func (acc ModuleAccount) AminoSize(cdc *amino.Codec) int {
 }
 
 func (acc ModuleAccount) MarshalToAmino(cdc *amino.Codec) ([]byte, error) {
-	var buf bytes.Buffer
-	buf.Grow(acc.AminoSize(cdc))
-	err := acc.MarshalAminoTo(cdc, &buf)
+	buf := bufPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufPool.Put(buf)
+
+	err := acc.MarshalAminoTo(cdc, buf)
 	if err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+
+	bytesCopy := make([]byte, buf.Len())
+	copy(bytesCopy, buf.Bytes())
+	return bytesCopy, nil
 }
 
 func (acc ModuleAccount) MarshalAminoTo(cdc *amino.Codec, buf *bytes.Buffer) error {
