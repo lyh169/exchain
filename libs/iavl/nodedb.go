@@ -3,6 +3,7 @@ package iavl
 import (
 	"bytes"
 	"fmt"
+	stdlog "log"
 	"math"
 	"sort"
 	"strings"
@@ -672,6 +673,8 @@ func (ndb *nodeDB) traverseNodes(fn func(hash []byte, node *Node)) {
 }
 
 func (ndb *nodeDB) String() string {
+
+	stdlog.Println("giskook")
 	var str string
 	index := 0
 	strs := make([]string, 0)
