@@ -3,7 +3,6 @@ package types
 import (
 	"bytes"
 	"fmt"
-	"github.com/okex/exchain/libs/tendermint/consensus"
 	"github.com/okex/exchain/libs/tendermint/libs/automation"
 	"strings"
 	"sync"
@@ -260,7 +259,7 @@ func (voteSet *VoteSet) addVerifiedVote(
 		if existing.BlockID.Equals(vote.BlockID) {
 			panic("addVerifiedVote does not expect duplicate votes")
 		} else {
-			if consensus.ActiveViewChange && vote.HasVC && !existing.HasVC {
+			if vote.HasVC && !existing.HasVC {
 				voteSet.votes[valIndex] = vote
 				voteSet.votesBitArray.SetIndex(valIndex, true)
 			} else {
