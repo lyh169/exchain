@@ -569,14 +569,14 @@ func (node *Node) calcBalance(t *ImmutableTree) int {
 
 // traverse is a wrapper over traverseInRange when we want the whole tree
 func (node *Node) traverse(t *ImmutableTree, ascending bool, cb func(*Node) bool) bool {
-	return node.traverseInRange(t, nil, nil, ascending, false, 0, false, func(node *Node, depth uint8) bool {
+	return node.traverseInRange2(t, nil, nil, ascending, false, false, func(node *Node) bool {
 		return cb(node)
 	})
 }
 
 // traversePost is a wrapper over traverseInRange when we want the whole tree post-order
 func (node *Node) traversePost(t *ImmutableTree, ascending bool, cb func(*Node) bool) bool {
-	return node.traverseInRange(t, nil, nil, ascending, false, 0, true, func(node *Node, depth uint8) bool {
+	return node.traverseInRange2(t, nil, nil, ascending, false, true, func(node *Node) bool {
 		return cb(node)
 	})
 }
