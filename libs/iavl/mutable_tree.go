@@ -40,13 +40,16 @@ var (
 //
 // The inner ImmutableTree should not be used directly by callers.
 type MutableTree struct {
-	*ImmutableTree                 // The current, working tree.
-	lastSaved       *ImmutableTree // The most recently saved tree.
-	orphans         []*Node        // Nodes removed by changes to working tree.Will refresh after each block
-	commitOrphans   []commitOrphan // Nodes removed by changes to working tree.Will refresh after each commit.
-	versions        *SyncMap       // The previous, saved versions of the tree.
-	removedVersions sync.Map       // The removed versions of the tree.
-	ndb             *nodeDB
+	*ImmutableTree                                  // The current, working tree.
+	lastSaved                *ImmutableTree         // The most recently saved tree.
+	orphans                  []*Node                // Nodes removed by changes to working tree.Will refresh after each block
+	commitOrphans            []commitOrphan         // Nodes removed by changes to working tree.Will refresh after each commit.
+	versions                 *SyncMap               // The previous, saved versions of the tree.
+	removedVersions          sync.Map               // The removed versions of the tree.
+	unsavedFastNodeAdditions map[string]*FastNode   // FastNodes that have not yet been saved to disk
+	unsavedFastNodeRemovals  map[string]interface{} // FastNodes that have not yet been removed from disk
+	mtx                      sync.Mutex
+	ndb                      *nodeDB
 
 	savedNodes map[string]*Node
 	deltas     *TreeDelta // For using in other peer
@@ -83,13 +86,15 @@ func NewMutableTreeWithOpts(db dbm.DB, cacheSize int, opts *Options) (*MutableTr
 		tree = savedTree
 	} else {
 		tree = &MutableTree{
-			ImmutableTree: head,
-			lastSaved:     head.clone(),
-			savedNodes:    map[string]*Node{},
-			deltas:        &TreeDelta{[]*NodeJsonImp{}, []*NodeJson{}, []*CommitOrphansImp{}},
-			orphans:       []*Node{},
-			versions:      NewSyncMap(),
-			ndb:           ndb,
+			ImmutableTree:            head,
+			lastSaved:                head.clone(),
+			savedNodes:               map[string]*Node{},
+			deltas:                   &TreeDelta{[]*NodeJsonImp{}, []*NodeJson{}, []*CommitOrphansImp{}},
+			orphans:                  []*Node{},
+			versions:                 NewSyncMap(),
+			unsavedFastNodeAdditions: make(map[string]*FastNode),
+			unsavedFastNodeRemovals:  make(map[string]interface{}),
+			ndb:                      ndb,
 
 			committedHeightMap:   map[int64]bool{},
 			committedHeightQueue: list.New(),
@@ -155,7 +160,7 @@ func (tree *MutableTree) WorkingHash() []byte {
 }
 
 // String returns a string representation of the tree.
-func (tree *MutableTree) String() string {
+func (tree *MutableTree) String() (string, error) {
 	return tree.ndb.String()
 }
 
@@ -175,6 +180,20 @@ func (tree *MutableTree) Set(key, value []byte) bool {
 	return updated
 }
 
+// Get returns the value of the specified key if it exists, or nil otherwise.
+// The returned value must not be modified, since it may point to data stored within IAVL.
+func (tree *MutableTree) Get(key []byte) []byte {
+	if tree.root == nil {
+		return nil
+	}
+
+	if fastNode, ok := tree.unsavedFastNodeAdditions[string(key)]; ok {
+		return fastNode.value
+	}
+
+	return tree.ImmutableTree.Get(key)
+}
+
 // Import returns an importer for tree nodes previously exported by ImmutableTree.Export(),
 // producing an identical IAVL tree. The caller must call Close() on the importer when done.
 //
@@ -187,12 +206,43 @@ func (tree *MutableTree) Import(version int64) (*Importer, error) {
 	return newImporter(tree, version)
 }
 
+// Iterate iterates over all keys of the tree. The keys and values must not be modified,
+// since they may point to data stored within IAVL. Returns true if stopped by callnack, false otherwise
+func (tree *MutableTree) Iterate(fn func(key []byte, value []byte) bool) (stopped bool) {
+	if tree.root == nil {
+		return false
+	}
+
+	if !tree.IsFastCacheEnabled() {
+		return tree.ImmutableTree.Iterate(fn)
+	}
+
+	itr := NewUnsavedFastIterator(nil, nil, true, tree.ndb, tree.unsavedFastNodeAdditions, tree.unsavedFastNodeRemovals)
+	defer itr.Close()
+	for ; itr.Valid(); itr.Next() {
+		if fn(itr.Key(), itr.Value()) {
+			return true
+		}
+	}
+	return false
+}
+
+// Iterator returns an iterator over the mutable tree.
+// CONTRACT: no updates are made to the tree while an iterator is active.
+func (tree *MutableTree) Iterator(start, end []byte, ascending bool) dbm.Iterator {
+	if tree.IsFastCacheEnabled() {
+		return NewUnsavedFastIterator(start, end, ascending, tree.ndb, tree.unsavedFastNodeAdditions, tree.unsavedFastNodeRemovals)
+	}
+	return tree.ImmutableTree.Iterator(start, end, ascending)
+}
+
 func (tree *MutableTree) set(key []byte, value []byte) (orphans []*Node, updated bool) {
 	if value == nil {
 		panic(fmt.Sprintf("Attempt to store nil value at key '%s'", key))
 	}
 
 	if tree.ImmutableTree.root == nil {
+		tree.addUnsavedAddition(key, NewFastNode(key, value, tree.version+1))
 		tree.ImmutableTree.root = NewNode(key, value, tree.version+1)
 		return nil, updated
 	}
@@ -208,6 +258,7 @@ func (tree *MutableTree) recursiveSet(node *Node, key []byte, value []byte, orph
 	version := tree.version + 1
 
 	if node.isLeaf() {
+		tree.addUnsavedAddition(key, NewFastNode(key, value, version))
 		switch bytes.Compare(key, node.key) {
 		case -1:
 			return &Node{
@@ -274,6 +325,7 @@ func (tree *MutableTree) remove(key []byte) (value []byte, orphaned []*Node, rem
 		return nil, nil, false
 	}
 
+	tree.addUnsavedRemoval(key)
 	if newRoot == nil && newRootHash != nil {
 		tree.root = tree.ndb.GetNode(newRootHash)
 	} else {
