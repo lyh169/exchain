@@ -193,7 +193,9 @@ func (so *stateObject) CommitTrie(db ethstate.Database) error {
 // finalise moves all dirty storage slots into the pending area to be hashed or
 // committed later. It is invoked at the end of every transaction.
 func (so *stateObject) finalise(prefetch bool) {
-	slotsToPrefetch := make([][]byte, 0, len(so.dirtyStorage))
+	slotsToPrefetch := getAddresses()
+	defer putAddresses(slotsToPrefetch)
+
 	for key, value := range so.dirtyStorage {
 		so.pendingStorage[key] = value
 		if value != so.originStorage[key] {

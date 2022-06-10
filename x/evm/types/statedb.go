@@ -35,13 +35,13 @@ type revision struct {
 }
 
 type CommitStateDBParams struct {
-	StoreKey       sdk.StoreKey
-	ParamSpace     Subspace
-	AccountKeeper  AccountKeeper
-	SupplyKeeper   SupplyKeeper
-	Watcher        Watcher
-	BankKeeper     BankKeeper
-	Ada            DbAdapter
+	StoreKey      sdk.StoreKey
+	ParamSpace    Subspace
+	AccountKeeper AccountKeeper
+	SupplyKeeper  SupplyKeeper
+	Watcher       Watcher
+	BankKeeper    BankKeeper
+	Ada           DbAdapter
 	// Amino codec
 	Cdc *codec.Codec
 
@@ -84,12 +84,12 @@ type CommitStateDB struct {
 	// StateDB interface. Perhaps there is a better way.
 	ctx sdk.Context
 
-	storeKey       sdk.StoreKey
-	paramSpace     Subspace
-	accountKeeper  AccountKeeper
-	supplyKeeper   SupplyKeeper
-	Watcher        Watcher
-	bankKeeper     BankKeeper
+	storeKey      sdk.StoreKey
+	paramSpace    Subspace
+	accountKeeper AccountKeeper
+	supplyKeeper  SupplyKeeper
+	Watcher       Watcher
+	bankKeeper    BankKeeper
 
 	// array that hold 'live' objects, which will get modified while processing a
 	// state transition
@@ -165,13 +165,13 @@ func NewCommitStateDB(csdbParams CommitStateDBParams) *CommitStateDB {
 		trie:         csdbParams.Trie,
 		originalRoot: csdbParams.RootHash,
 
-		storeKey:       csdbParams.StoreKey,
-		paramSpace:     csdbParams.ParamSpace,
-		accountKeeper:  csdbParams.AccountKeeper,
-		supplyKeeper:   csdbParams.SupplyKeeper,
-		bankKeeper:     csdbParams.BankKeeper,
-		Watcher:        csdbParams.Watcher,
-		cdc:            csdbParams.Cdc,
+		storeKey:      csdbParams.StoreKey,
+		paramSpace:    csdbParams.ParamSpace,
+		accountKeeper: csdbParams.AccountKeeper,
+		supplyKeeper:  csdbParams.SupplyKeeper,
+		bankKeeper:    csdbParams.BankKeeper,
+		Watcher:       csdbParams.Watcher,
+		cdc:           csdbParams.Cdc,
 
 		stateObjects:        make(map[ethcmn.Address]*stateObject),
 		stateObjectsPending: make(map[ethcmn.Address]struct{}),
@@ -875,7 +875,9 @@ func (csdb *CommitStateDB) Commit(deleteEmptyObjects bool) (ethcmn.Hash, error) 
 // removing the csdb destructed objects and clearing the journal as well as the
 // refunds.
 func (csdb *CommitStateDB) Finalise(deleteEmptyObjects bool) {
-	addressesToPrefetch := make([][]byte, 0, len(csdb.journal.dirties))
+	addressesToPrefetch := getAddresses()
+	defer putAddresses(addressesToPrefetch)
+
 	for addr := range csdb.journal.dirties {
 		obj, exist := csdb.stateObjects[addr]
 		if !exist {
