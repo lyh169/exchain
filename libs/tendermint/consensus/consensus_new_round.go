@@ -58,6 +58,7 @@ func (cs *State) doNewRound(height int64, round int, avc bool, val *types.Valida
 		if cs.Votes.Round() == 0 {
 			cs.Votes.SetRound(1) // also track next round (round+1) to allow round-skipping
 		}
+		cs.Votes.ClearVoteForAVC()
 	}
 
 	// Setup new round

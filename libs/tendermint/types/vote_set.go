@@ -259,12 +259,7 @@ func (voteSet *VoteSet) addVerifiedVote(
 		if existing.BlockID.Equals(vote.BlockID) {
 			panic("addVerifiedVote does not expect duplicate votes")
 		} else {
-			if vote.HasVC && !existing.HasVC {
-				voteSet.votes[valIndex] = vote
-				voteSet.votesBitArray.SetIndex(valIndex, true)
-			} else {
-				conflicting = existing
-			}
+			conflicting = existing
 		}
 		// Replace vote if blockKey matches voteSet.maj23.
 		if voteSet.maj23 != nil && voteSet.maj23.Key() == blockKey {
