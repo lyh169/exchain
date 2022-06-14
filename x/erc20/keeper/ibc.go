@@ -226,6 +226,7 @@ func (k Keeper) CallModuleERC20Proxy(ctx sdk.Context, contract common.Address, m
 
 	_, res, err := k.callEvmByModule(ctx, &contract, big.NewInt(0), data)
 	if err != nil {
+		k.Logger(ctx).Error("CallModuleERC20Proxy error", err.Error())
 		return nil, fmt.Errorf("call contract failed: %s, %s, %s", contract.Hex(), method, err)
 	}
 	return res.Ret, nil
