@@ -144,6 +144,7 @@ func (k Keeper) IterateMapping(ctx sdk.Context, cb func(denom, contract string) 
 func (k Keeper) ProxyContractRedirect(ctx sdk.Context, denom string, tp types.RedirectType, addr common.Address) error {
 	err := k.redirectProxyContractInfoByTp(ctx, denom, addr, tp)
 	if err != nil {
+		k.Logger(ctx).Error("ProxyContractRedirect error", err.Error())
 		return types.ErrProxyContractRedirect(denom, int(tp), addr.String())
 	}
 	return nil
