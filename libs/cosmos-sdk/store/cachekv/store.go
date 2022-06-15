@@ -3,9 +3,7 @@ package cachekv
 import (
 	"bytes"
 	"io"
-	stdlog "log"
 	"reflect"
-	"runtime/debug"
 	"sort"
 	"sync"
 	"unsafe"
@@ -76,8 +74,6 @@ func (store *Store) Get(key []byte) (value []byte) {
 			value = c
 		} else {
 			value = store.parent.Get(key)
-			stdlog.Printf("giskook %v \n", key)
-			debug.PrintStack()
 			store.setCacheValue(key, value, false, false)
 		}
 	} else {
