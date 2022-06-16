@@ -2,6 +2,9 @@ package baseapp
 
 import (
 	"bytes"
+	"runtime"
+	"sync"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/okex/exchain/libs/cosmos-sdk/store/types"
 	sdk "github.com/okex/exchain/libs/cosmos-sdk/types"
@@ -9,8 +12,6 @@ import (
 	abci "github.com/okex/exchain/libs/tendermint/abci/types"
 	sm "github.com/okex/exchain/libs/tendermint/state"
 	"github.com/spf13/viper"
-	"runtime"
-	"sync"
 )
 
 var (
@@ -50,6 +51,15 @@ func (app *BaseApp) getExtraDataByTxs(txs [][]byte) {
 				return
 			}
 			coin, isEvm, s, toAddr, _ := app.getTxFeeAndFromHandler(app.getContextForTx(runTxModeDeliver, txBytes), tx)
+
+			//	if isEvm && app.preDeliverTxHandler != nil {
+			//		ctx := app.deliverState.ctx
+			//		ctx.SetCache(app.blockCache).
+			//			SetGasMeter(sdk.NewInfiniteGasMeter())
+
+			//		app.preDeliverTxHandler(ctx, tx, !app.chainCache.IsEnabled())
+			//	}
+
 			para.extraTxsInfo[index] = &extraDataForTx{
 				fee:   coin,
 				isEvm: isEvm,

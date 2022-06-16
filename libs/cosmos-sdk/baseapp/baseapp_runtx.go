@@ -441,7 +441,7 @@ func useCache(mode runTxMode) bool {
 }
 
 func (app *BaseApp) newBlockCache() {
-	app.blockCache = sdk.NewCache(app.chainCache, sdk.UseCache && !app.parallelTxManage.isAsyncDeliverTx)
+	app.blockCache = sdk.NewCache(app.chainCache, sdk.UseCache)
 	app.deliverState.ctx.SetCache(app.blockCache)
 }
 
