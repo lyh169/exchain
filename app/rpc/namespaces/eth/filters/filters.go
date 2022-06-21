@@ -163,6 +163,9 @@ func (f *Filter) blockLogs(header *ethtypes.Header, hash common.Hash) ([]*ethtyp
 
 	var unfiltered []*ethtypes.Log // nolint: prealloc
 	for _, logs := range logsList {
+		for _, log := range logs {
+			fmt.Println(log.BlockNumber)
+		}
 		unfiltered = append(unfiltered, logs...)
 	}
 	logs := FilterLogs(unfiltered, nil, nil, f.criteria.Addresses, f.criteria.Topics)
@@ -241,7 +244,7 @@ func (f *Filter) unindexedLogs(ctx context.Context, end uint64) ([]*ethtypes.Log
 	begin := f.criteria.FromBlock.Int64()
 	beginPtr := &begin
 	defer f.criteria.FromBlock.SetInt64(*beginPtr)
-
+	fmt.Printf("unindexedLogs:begin=%d,end=%d", begin, end)
 	for ; begin <= int64(end); begin++ {
 		header, err := f.backend.HeaderByNumber(rpctypes.BlockNumber(begin))
 		if header == nil || err != nil {
@@ -251,6 +254,7 @@ func (f *Filter) unindexedLogs(ctx context.Context, end uint64) ([]*ethtypes.Log
 		if err != nil {
 			return logs, err
 		}
+		fmt.Printf("blockLogs:header=%v,hash=%s", header.Number.Int64(), hash.String())
 		found, err := f.blockLogs(header, hash)
 		if err != nil {
 			return logs, err
