@@ -3,6 +3,7 @@ package watcher
 import (
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/okex/exchain/libs/cosmos-sdk/x/auth"
 	"github.com/stretchr/testify/suite"
 )
@@ -26,5 +27,20 @@ func (suite *WatcherTestSuite) TestCreateWatchTx() {
 	if wtx == nil {
 		suite.T().Log("----")
 	}
-	suite.Equal(nil, wtx)
+	//	suite.Equal(nil, wtx)
+	//	var txMsg WatchTx
+	//	suite.Equal(nil, txMsg)
+
+	eTx := NewEvmTx(nil, common.Hash{}, common.Hash{}, 0, 0)
+	tx := eTx.GetTxWatchMessage()
+	suite.Equal(nil, tx)
+	if txWatchMessage := eTx.GetTxWatchMessage(); txWatchMessage != nil {
+		suite.T().Log("-------")
+	}
+	suite.watcher.saveTx(eTx)
+
+	batch := []WatchMessage{}
+	var evTx *DelAccMsg
+	batch = append(batch, evTx)
+	suite.watcher.commitBatch(batch)
 }
