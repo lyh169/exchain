@@ -92,7 +92,7 @@ func (f *Filter) Logs(ctx context.Context) ([]*ethtypes.Log, error) {
 		}
 		return f.blockLogs(header, *f.criteria.BlockHash)
 	}
-
+	fmt.Println(2)
 	// Figure out the limits of the filter range
 	header, err := f.backend.HeaderByNumber(rpctypes.LatestBlockNumber)
 	if err != nil {
@@ -110,7 +110,7 @@ func (f *Filter) Logs(ctx context.Context) ([]*ethtypes.Log, error) {
 	if f.criteria.ToBlock.Int64() == -1 {
 		f.criteria.ToBlock = big.NewInt(head)
 	}
-
+	fmt.Println(3)
 	if f.criteria.FromBlock.Int64() <= tmtypes.GetStartBlockHeight() ||
 		f.criteria.ToBlock.Int64() <= tmtypes.GetStartBlockHeight() {
 		return nil, fmt.Errorf("from and to block height must greater than %d", tmtypes.GetStartBlockHeight())
@@ -122,7 +122,7 @@ func (f *Filter) Logs(ctx context.Context) ([]*ethtypes.Log, error) {
 	} else if heightSpan > 0 && f.criteria.ToBlock.Int64()-f.criteria.FromBlock.Int64() > heightSpan {
 		return nil, fmt.Errorf("the span between fromBlock and toBlock must be less than or equal to %d", heightSpan)
 	}
-
+	fmt.Println(4)
 	begin := f.criteria.FromBlock.Uint64()
 	end := f.criteria.ToBlock.Uint64()
 	size, sections := f.backend.BloomStatus()
@@ -131,8 +131,10 @@ func (f *Filter) Logs(ctx context.Context) ([]*ethtypes.Log, error) {
 		f.criteria.FromBlock.Sub(f.criteria.FromBlock, big.NewInt(tmtypes.GetStartBlockHeight()))
 		if indexed > end {
 			logs, err = f.indexedLogs(ctx, end-uint64(tmtypes.GetStartBlockHeight()))
+			fmt.Printf("indexedLogs:len=%d\n", len(logs))
 		} else {
 			logs, err = f.indexedLogs(ctx, indexed-1-uint64(tmtypes.GetStartBlockHeight()))
+			fmt.Printf("indexedLogs2:len=%d\n", len(logs))
 		}
 		if err != nil {
 			return logs, err
@@ -140,10 +142,10 @@ func (f *Filter) Logs(ctx context.Context) ([]*ethtypes.Log, error) {
 		// recover from block height
 		f.criteria.FromBlock.Add(f.criteria.FromBlock, big.NewInt(tmtypes.GetStartBlockHeight()))
 	}
-	fmt.Printf("indexedLogs:len=%d", len(logs))
+	fmt.Printf("indexedLogs:len=%d\n", len(logs))
 	rest, err := f.unindexedLogs(ctx, end)
 	logs = append(logs, rest...)
-	fmt.Printf("logs:len=%d", len(logs))
+	fmt.Printf("logs:len=%d\n", len(logs))
 	return logs, err
 }
 
@@ -167,7 +169,7 @@ func (f *Filter) blockLogs(header *ethtypes.Header, hash common.Hash) ([]*ethtyp
 	if len(logs) == 0 {
 		return []*ethtypes.Log{}, nil
 	}
-	fmt.Printf("FilterLogs:len=%d", len(logs))
+	fmt.Printf("FilterLogs:len=%d\n", len(logs))
 	return logs, nil
 }
 

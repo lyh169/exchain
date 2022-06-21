@@ -477,6 +477,7 @@ func (api *PublicFilterAPI) GetLogs(ctx context.Context, criteria filters.Filter
 		// Construct the range filter
 		filter = NewRangeFilter(api.backend, begin, end, criteria.Addresses, criteria.Topics)
 	}
+	fmt.Println(1)
 	// Run the filter and return all the logs
 	logs, err := filter.Logs(ctx)
 	if err != nil {
