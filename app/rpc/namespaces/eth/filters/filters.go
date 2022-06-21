@@ -140,8 +140,10 @@ func (f *Filter) Logs(ctx context.Context) ([]*ethtypes.Log, error) {
 		// recover from block height
 		f.criteria.FromBlock.Add(f.criteria.FromBlock, big.NewInt(tmtypes.GetStartBlockHeight()))
 	}
+	fmt.Printf("indexedLogs:len=%d", len(logs))
 	rest, err := f.unindexedLogs(ctx, end)
 	logs = append(logs, rest...)
+	fmt.Printf("logs:len=%d", len(logs))
 	return logs, err
 }
 
@@ -160,10 +162,12 @@ func (f *Filter) blockLogs(header *ethtypes.Header, hash common.Hash) ([]*ethtyp
 	for _, logs := range logsList {
 		unfiltered = append(unfiltered, logs...)
 	}
+	fmt.Printf("unfiltered:len=%d,from=%d,to=%d\n", len(unfiltered), f.criteria.FromBlock.Int64(), f.criteria.ToBlock.Int64())
 	logs := FilterLogs(unfiltered, f.criteria.FromBlock, f.criteria.ToBlock, f.criteria.Addresses, f.criteria.Topics)
 	if len(logs) == 0 {
 		return []*ethtypes.Log{}, nil
 	}
+	fmt.Printf("FilterLogs:len=%d", len(logs))
 	return logs, nil
 }
 
