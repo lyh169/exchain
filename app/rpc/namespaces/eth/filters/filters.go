@@ -126,6 +126,7 @@ func (f *Filter) Logs(ctx context.Context) ([]*ethtypes.Log, error) {
 	begin := f.criteria.FromBlock.Uint64()
 	end := f.criteria.ToBlock.Uint64()
 	size, sections := f.backend.BloomStatus()
+	fmt.Println(sections, size, uint64(tmtypes.GetStartBlockHeight()), begin, end)
 	if indexed := sections*size + uint64(tmtypes.GetStartBlockHeight()); indexed > begin {
 		// update from block height
 		f.criteria.FromBlock.Sub(f.criteria.FromBlock, big.NewInt(tmtypes.GetStartBlockHeight()))
@@ -185,7 +186,7 @@ func (f *Filter) checkMatches(hash common.Hash) (logs []*ethtypes.Log, err error
 	for _, logs := range logsList {
 		unfiltered = append(unfiltered, logs...)
 	}
-	logs = filterLogs(unfiltered, nil, nil, f.criteria.Addresses, f.criteria.Topics)
+	logs = filterLogs(unfiltered, f.criteria.FromBlock, f.criteria.ToBlock, f.criteria.Addresses, f.criteria.Topics)
 	return logs, nil
 }
 
