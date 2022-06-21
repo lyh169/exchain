@@ -7,9 +7,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/tendermint/go-amino"
 
 	"github.com/okex/exchain/libs/system/trace"
 	abci "github.com/okex/exchain/libs/tendermint/abci/types"
@@ -245,7 +248,8 @@ func (mem *CListMempool) CheckTx(tx types.Tx, cb func(*abci.Response), txInfo Tx
 		return ErrTxTooLarge{mem.config.MaxTxBytes, txSize}
 	}
 	// CACHE
-	if !mem.cache.Push(tx) {
+	txkey := txKey(tx)
+	if !mem.cache.PushKey(txkey) {
 		return ErrTxInCache
 	}
 
@@ -277,7 +281,7 @@ func (mem *CListMempool) CheckTx(tx types.Tx, cb func(*abci.Response), txInfo Tx
 	// Note it's possible a tx is still in the cache but no longer in the mempool
 	// (eg. after committing a block, txs are removed from mempool but not cache),
 	// so we only record the sender for txs still in the mempool.
-	if ele, ok := mem.txs.Load(txKey(tx)); ok {
+	if ele, ok := mem.txs.Load(txkey); ok {
 		memTx := ele.Value.(*mempoolTx)
 		memTx.senders.LoadOrStore(txInfo.SenderID, true)
 		// TODO: consider punishing peer for dups,
@@ -450,7 +454,7 @@ func (mem *CListMempool) consumePendingTx(address string, nonce uint64) {
 		}
 
 		mem.logger.Info("Added good transaction",
-			"tx", txID(mempoolTx.tx, mempoolTx.height),
+			"tx", txIDStringer{mempoolTx.tx, mempoolTx.height},
 			"height", mempoolTx.height,
 			"total", mem.Size(),
 		)
@@ -524,7 +528,7 @@ func (mem *CListMempool) resCbFirstTime(
 
 			if err == nil {
 				mem.logger.Info("Added good transaction",
-					"tx", txID(tx, mem.Height()),
+					"tx", txIDStringer{tx, mem.height},
 					"res", r,
 					"height", memTx.height,
 					"total", mem.Size(),
@@ -533,7 +537,7 @@ func (mem *CListMempool) resCbFirstTime(
 			} else {
 				// ignore bad transaction
 				mem.logger.Info("Fail to add transaction into mempool, rejected it",
-					"tx", txID(tx, mem.Height()), "peerID", txInfo.SenderP2PID, "res", r, "err", postCheckErr)
+					"tx", txIDStringer{tx, mem.height}, "peerID", txInfo.SenderP2PID, "res", r, "err", postCheckErr)
 				mem.metrics.FailedTxs.Add(1)
 				// remove from cache (it might be good later)
 				mem.cache.Remove(tx)
@@ -544,7 +548,7 @@ func (mem *CListMempool) resCbFirstTime(
 		} else {
 			// ignore bad transaction
 			mem.logger.Info("Rejected bad transaction",
-				"tx", txID(tx, mem.Height()), "peerID", txInfo.SenderP2PID, "res", r, "err", postCheckErr)
+				"tx", txIDStringer{tx, mem.height}, "peerID", txInfo.SenderP2PID, "res", r, "err", postCheckErr)
 			mem.metrics.FailedTxs.Add(1)
 			// remove from cache (it might be good later)
 			mem.cache.Remove(tx)
@@ -577,7 +581,7 @@ func (mem *CListMempool) resCbRecheck(req *abci.Request, res *abci.Response) {
 			// Good, nothing to do.
 		} else {
 			// Tx became invalidated due to newly committed block.
-			mem.logger.Info("Tx is no longer valid", "tx", txID(tx, memTx.height), "res", r, "err", postCheckErr)
+			mem.logger.Info("Tx is no longer valid", "tx", txIDStringer{tx, memTx.height}, "res", r, "err", postCheckErr)
 			// NOTE: we remove tx from the cache because it might be good later
 			mem.cache.Remove(tx)
 			mem.removeTx(mem.recheckCursor)
@@ -720,6 +724,31 @@ func (mem *CListMempool) GetPendingNonce(address string) (uint64, bool) {
 	return mem.txs.GetAddressNonce(address)
 }
 
+type logData struct {
+	Params  [4]interface{}
+	Address string
+	Nonce   uint64
+}
+
+var logDataPool = sync.Pool{
+	New: func() interface{} {
+		return &logData{}
+	},
+}
+
+func (mem *CListMempool) logUpdate(address string, nonce uint64) {
+	logData := logDataPool.Get().(*logData)
+	logData.Address = address
+	logData.Nonce = nonce
+	params := &logData.Params
+	params[0] = "address"
+	params[1] = &logData.Address
+	params[2] = "nonce"
+	params[3] = &logData.Nonce
+	mem.logger.Debug("mempool update", params[:4]...)
+	logDataPool.Put(logData)
+}
+
 // Lock() must be help by the caller during execution.
 func (mem *CListMempool) Update(
 	height int64,
@@ -740,9 +769,13 @@ func (mem *CListMempool) Update(
 	}
 
 	var gasUsed uint64
-	toCleanAccMap := make(map[string]uint64)
-	addressNonce := make(map[string]uint64)
+	var toCleanAccMap, addressNonce map[string]uint64
+	toCleanAccMap = make(map[string]uint64)
+	if mem.pendingPool != nil {
+		addressNonce = make(map[string]uint64)
+	}
 	for i, tx := range txs {
+		txkey := txKey(tx)
 		txCode := deliverTxResponses[i].Code
 		// CodeTypeOK means tx was successfully executed.
 		// CodeTypeNonceInc means tx fails but the nonce of the account increases,
@@ -751,7 +784,7 @@ func (mem *CListMempool) Update(
 			// add gas used with valid committed tx
 			gasUsed += uint64(deliverTxResponses[i].GasUsed)
 			// Add valid committed tx to the cache (if missing).
-			_ = mem.cache.Push(tx)
+			_ = mem.cache.PushKey(txkey)
 		} else {
 			// Allow invalid transactions to be resubmitted.
 			mem.cache.Remove(tx)
@@ -769,11 +802,11 @@ func (mem *CListMempool) Update(
 		// https://github.com/tendermint/tendermint/issues/3322.
 		addr := ""
 		nonce := uint64(0)
-		if ele, ok := mem.txs.Load(txKey(tx)); ok {
+		if ele, ok := mem.txs.Load(txkey); ok {
 			addr = ele.Address
 			nonce = ele.Nonce
 			mem.removeTx(ele)
-			mem.logger.Debug("Mempool update", "address", ele.Address, "nonce", ele.Nonce)
+			mem.logUpdate(ele.Address, ele.Nonce)
 		} else {
 			if mem.txInfoparser != nil {
 				txInfo := mem.txInfoparser.GetRawTxInfo(tx)
@@ -788,14 +821,16 @@ func (mem *CListMempool) Update(
 		if txCode == abci.CodeTypeOK || txCode > abci.CodeTypeNonceInc {
 			toCleanAccMap[addr] = nonce
 		}
-		addressNonce[addr] = nonce
+		if mem.pendingPool != nil {
+			addressNonce[addr] = nonce
+		}
 
 		if mem.pendingPool != nil {
 			mem.pendingPool.removeTxByHash(txID(tx, height))
 		}
 	}
 	mem.metrics.GasUsed.Set(float64(gasUsed))
-	trace.GetElapsedInfo().AddInfo(trace.GasUsed, fmt.Sprintf("%d", gasUsed))
+	trace.GetElapsedInfo().AddInfo(trace.GasUsed, strconv.FormatUint(gasUsed, 10))
 
 	for accAddr, accMaxNonce := range toCleanAccMap {
 		mem.txs.CleanItems(accAddr, accMaxNonce)
@@ -826,8 +861,8 @@ func (mem *CListMempool) Update(
 		mem.metrics.PendingPoolSize.Set(float64(mem.pendingPool.Size()))
 	}
 
-	trace.GetElapsedInfo().AddInfo(trace.MempoolCheckTxCnt, fmt.Sprintf("%d", atomic.LoadInt64(&mem.checkCnt)))
-	trace.GetElapsedInfo().AddInfo(trace.MempoolTxsCnt, fmt.Sprintf("%d", mem.txs.Len()))
+	trace.GetElapsedInfo().AddInfo(trace.MempoolCheckTxCnt, strconv.FormatInt(atomic.LoadInt64(&mem.checkCnt), 10))
+	trace.GetElapsedInfo().AddInfo(trace.MempoolTxsCnt, strconv.Itoa(mem.txs.Len()))
 	atomic.StoreInt64(&mem.checkCnt, 0)
 
 	// WARNING: The txs inserted between [ReapMaxBytesMaxGas, Update) is insert-sorted in the mempool.txs,
@@ -898,6 +933,7 @@ func (memTx *mempoolTx) Height() int64 {
 type txCache interface {
 	Reset()
 	Push(tx types.Tx) bool
+	PushKey(key [32]byte) bool
 	Remove(tx types.Tx)
 }
 
@@ -956,6 +992,28 @@ func (cache *mapTxCache) Push(tx types.Tx) bool {
 	return true
 }
 
+func (cache *mapTxCache) PushKey(txHash [32]byte) bool {
+	cache.mtx.Lock()
+	defer cache.mtx.Unlock()
+
+	if moved, exists := cache.cacheMap[txHash]; exists {
+		cache.list.MoveToBack(moved)
+		return false
+	}
+
+	if cache.list.Len() >= cache.size {
+		popped := cache.list.Front()
+		poppedTxHash := popped.Value.([sha256.Size]byte)
+		delete(cache.cacheMap, poppedTxHash)
+		if popped != nil {
+			cache.list.Remove(popped)
+		}
+	}
+	e := cache.list.PushBack(txHash)
+	cache.cacheMap[txHash] = e
+	return true
+}
+
 // Remove removes the given tx from the cache.
 func (cache *mapTxCache) Remove(tx types.Tx) {
 	txHash := txKey(tx)
@@ -974,9 +1032,10 @@ type nopTxCache struct{}
 
 var _ txCache = (*nopTxCache)(nil)
 
-func (nopTxCache) Reset()             {}
-func (nopTxCache) Push(types.Tx) bool { return true }
-func (nopTxCache) Remove(types.Tx)    {}
+func (nopTxCache) Reset()                    {}
+func (nopTxCache) Push(types.Tx) bool        { return true }
+func (nopTxCache) PushKey(key [32]byte) bool { return true }
+func (nopTxCache) Remove(types.Tx)           {}
 
 //--------------------------------------------------------------------------------
 // txKey is the fixed length array sha256 hash used as the key in maps.
@@ -985,9 +1044,18 @@ func txKey(tx types.Tx) (retHash [sha256.Size]byte) {
 	return
 }
 
+type txIDStringer struct {
+	tx     []byte
+	height int64
+}
+
+func (txs txIDStringer) String() string {
+	return amino.HexEncodeToStringUpper(types.Tx(txs.tx).Hash(txs.height))
+}
+
 // txID is the hex encoded hash of the bytes as a types.Tx.
 func txID(tx []byte, height int64) string {
-	return fmt.Sprintf("%X", types.Tx(tx).Hash(height))
+	return amino.HexEncodeToStringUpper(types.Tx(tx).Hash(height))
 }
 
 //--------------------------------------------------------------------------------
