@@ -125,13 +125,17 @@ func (f *Filter) Logs(ctx context.Context) ([]*ethtypes.Log, error) {
 
 	begin := f.criteria.FromBlock.Uint64()
 	end := f.criteria.ToBlock.Uint64()
+	fmt.Printf("logs:begin=%d,end=%d\n", begin, end)
 	size, sections := f.backend.BloomStatus()
+	fmt.Printf("size=%d, sections=%d\n", size, sections)
 	if indexed := sections*size + uint64(tmtypes.GetStartBlockHeight()); indexed > begin {
 		// update from block height
 		f.criteria.FromBlock.Sub(f.criteria.FromBlock, big.NewInt(tmtypes.GetStartBlockHeight()))
 		if indexed > end {
+			fmt.Printf("indexedLogs1:from=%d,end=%d", f.criteria.FromBlock.Int64(), end-uint64(tmtypes.GetStartBlockHeight()))
 			logs, err = f.indexedLogs(ctx, end-uint64(tmtypes.GetStartBlockHeight()))
 		} else {
+			fmt.Printf("indexedLogs2:from=%d,end=%d", f.criteria.FromBlock.Int64(), indexed-1-uint64(tmtypes.GetStartBlockHeight()))
 			logs, err = f.indexedLogs(ctx, indexed-1-uint64(tmtypes.GetStartBlockHeight()))
 		}
 		if err != nil {
@@ -140,6 +144,7 @@ func (f *Filter) Logs(ctx context.Context) ([]*ethtypes.Log, error) {
 		// recover from block height
 		f.criteria.FromBlock.Add(f.criteria.FromBlock, big.NewInt(tmtypes.GetStartBlockHeight()))
 	}
+	fmt.Printf("unindexedLogs:from=%d,end=%d\n", f.criteria.FromBlock.Int64(), end)
 	rest, err := f.unindexedLogs(ctx, end)
 	logs = append(logs, rest...)
 	return logs, err
