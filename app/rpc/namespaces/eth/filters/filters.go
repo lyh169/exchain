@@ -125,7 +125,6 @@ func (f *Filter) Logs(ctx context.Context) ([]*ethtypes.Log, error) {
 
 	begin := f.criteria.FromBlock.Uint64()
 	end := f.criteria.ToBlock.Uint64()
-
 	size, sections := f.backend.BloomStatus()
 	if indexed := sections*size + uint64(tmtypes.GetStartBlockHeight()); indexed > begin {
 		// update from block height
@@ -141,7 +140,6 @@ func (f *Filter) Logs(ctx context.Context) ([]*ethtypes.Log, error) {
 		// recover from block height
 		f.criteria.FromBlock.Add(f.criteria.FromBlock, big.NewInt(tmtypes.GetStartBlockHeight()))
 	}
-
 	rest, err := f.unindexedLogs(ctx, end)
 	logs = append(logs, rest...)
 	return logs, err
@@ -238,7 +236,7 @@ func (f *Filter) unindexedLogs(ctx context.Context, end uint64) ([]*ethtypes.Log
 	begin := f.criteria.FromBlock.Int64()
 	beginPtr := &begin
 	defer f.criteria.FromBlock.SetInt64(*beginPtr)
-	fmt.Printf("unindexedLogs:begin=%d,end=%d", begin, end)
+
 	for ; begin <= int64(end); begin++ {
 		header, err := f.backend.HeaderByNumber(rpctypes.BlockNumber(begin))
 		if header == nil || err != nil {
@@ -248,7 +246,6 @@ func (f *Filter) unindexedLogs(ctx context.Context, end uint64) ([]*ethtypes.Log
 		if err != nil {
 			return logs, err
 		}
-		fmt.Printf("blockLogs:header=%v,hash=%s", header.Number.Int64(), hash.String())
 		found, err := f.blockLogs(header, hash)
 		if err != nil {
 			return logs, err
