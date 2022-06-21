@@ -163,12 +163,12 @@ func (f *Filter) blockLogs(header *ethtypes.Header, hash common.Hash) ([]*ethtyp
 
 	var unfiltered []*ethtypes.Log // nolint: prealloc
 	for _, logs := range logsList {
-		for _, log := range logs {
-			fmt.Println(log.BlockNumber)
-		}
+		//for _, log := range logs {
+		//	fmt.Println(log.BlockNumber)
+		//}
 		unfiltered = append(unfiltered, logs...)
 	}
-	logs := FilterLogs(unfiltered, nil, nil, f.criteria.Addresses, f.criteria.Topics)
+	logs := FilterLogs(unfiltered, f.criteria.FromBlock, f.criteria.ToBlock, f.criteria.Addresses, f.criteria.Topics)
 	if len(logs) == 0 {
 		return []*ethtypes.Log{}, nil
 	}
