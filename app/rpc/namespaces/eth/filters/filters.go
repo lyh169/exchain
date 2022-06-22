@@ -186,6 +186,7 @@ func (f *Filter) checkMatches(hash common.Hash) (logs []*ethtypes.Log, err error
 	for _, logs := range logsList {
 		unfiltered = append(unfiltered, logs...)
 	}
+	fmt.Printf("unfiltered:len=%d,from=%d,to=%d\n", len(unfiltered), f.criteria.FromBlock.Int64(), f.criteria.ToBlock.Int64())
 	logs = FilterLogs(unfiltered, f.criteria.FromBlock, f.criteria.ToBlock, f.criteria.Addresses, f.criteria.Topics)
 	return logs, nil
 }
