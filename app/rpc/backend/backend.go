@@ -448,7 +448,9 @@ func (b *EthermintBackend) GetLogs(blockHash common.Hash) ([][]*ethtypes.Log, er
 			continue
 		}
 
+		fmt.Println("---", len(execRes.Logs), block.Block.Height)
 		for k, log := range execRes.Logs {
+			fmt.Println("===", k, log.BlockNumber)
 			if int64(log.BlockNumber) != block.Block.Height {
 				execRes.Logs = append(execRes.Logs[:k], execRes.Logs[k+1:]...)
 			}
