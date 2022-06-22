@@ -455,7 +455,6 @@ func (api *PublicFilterAPI) GetLogs(ctx context.Context, criteria filters.Filter
 	if api.backend.IsDisabled("eth_getLogs") {
 		return nil, ErrMethodNotAllowed
 	}
-
 	rateLimiter := api.backend.GetRateLimiter("eth_getLogs")
 	if rateLimiter != nil && !rateLimiter.Allow() {
 		return nil, ErrServerBusy
