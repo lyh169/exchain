@@ -166,7 +166,7 @@ func (f *Filter) blockLogs(header *ethtypes.Header, hash common.Hash) ([]*ethtyp
 		unfiltered = append(unfiltered, logs...)
 	}
 	fmt.Printf("unfiltered:len=%d,from=%d,to=%d\n", len(unfiltered), f.criteria.FromBlock.Int64(), f.criteria.ToBlock.Int64())
-	logs := FilterLogs(unfiltered, f.criteria.FromBlock, f.criteria.ToBlock, f.criteria.Addresses, f.criteria.Topics)
+	logs := FilterLogs(unfiltered, nil, nil, f.criteria.Addresses, f.criteria.Topics)
 	if len(logs) == 0 {
 		return []*ethtypes.Log{}, nil
 	}
@@ -187,7 +187,7 @@ func (f *Filter) checkMatches(hash common.Hash) (logs []*ethtypes.Log, err error
 		unfiltered = append(unfiltered, logs...)
 	}
 	fmt.Printf("unfiltered:len=%d,from=%d,to=%d\n", len(unfiltered), f.criteria.FromBlock.Int64(), f.criteria.ToBlock.Int64())
-	logs = FilterLogs(unfiltered, f.criteria.FromBlock, f.criteria.ToBlock, f.criteria.Addresses, f.criteria.Topics)
+	logs = FilterLogs(unfiltered, nil, nil, f.criteria.Addresses, f.criteria.Topics)
 	return logs, nil
 }
 
@@ -261,40 +261,4 @@ func (f *Filter) unindexedLogs(ctx context.Context, end uint64) ([]*ethtypes.Log
 		logs = append(logs, found...)
 	}
 	return logs, nil
-}
-
-// filterLogs creates a slice of logs matching the given criteria.
-func filterLogs(logs []*ethtypes.Log, fromBlock, toBlock *big.Int, addresses []common.Address, topics [][]common.Hash) []*ethtypes.Log {
-	var ret []*ethtypes.Log
-Logs:
-	for _, log := range logs {
-		if fromBlock != nil && fromBlock.Int64() >= 0 && fromBlock.Uint64() > log.BlockNumber {
-			continue
-		}
-		if toBlock != nil && toBlock.Int64() >= 0 && toBlock.Uint64() < log.BlockNumber {
-			continue
-		}
-
-		if len(addresses) > 0 && !includes(addresses, log.Address) {
-			continue
-		}
-		// If the to filtered topics is greater than the amount of topics in logs, skip.
-		if len(topics) > len(log.Topics) {
-			continue Logs
-		}
-		for i, sub := range topics {
-			match := len(sub) == 0 // empty rule set == wildcard
-			for _, topic := range sub {
-				if log.Topics[i] == topic {
-					match = true
-					break
-				}
-			}
-			if !match {
-				continue Logs
-			}
-		}
-		ret = append(ret, log)
-	}
-	return ret
 }
